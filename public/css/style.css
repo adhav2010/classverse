@@ -1,12 +1,16 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
 
 :root {
   --primary: #6366f1;
-  --primary-hover: #4f46e5;
-  --bg-dark: #0f172a;
-  --surface: #1e293b;
-  --surface-light: #334155;
-  --accent: #ec4899;
+  --primary-glow: rgba(99, 102, 241, 0.4);
+  --secondary: #ec4899;
+  --secondary-glow: rgba(236, 72, 153, 0.4);
+  --accent-cyan: #06b6d4;
+  --accent-cyan-glow: rgba(6, 182, 212, 0.4);
+  --accent-green: #10b981;
+  --bg-deep: #060913;
+  --bg-card: rgba(15, 23, 42, 0.65);
+  --card-border: rgba(255, 255, 255, 0.08);
 }
 
 * {
@@ -14,19 +18,65 @@
   font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
-body {
-  background-color: #0b0f19;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.12) 0px, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(14, 165, 233, 0.08) 0px, transparent 50%);
-  background-attachment: fixed;
-  color: #f1f5f9;
-  min-height: 100vh;
+h1, h2, h3, h4, .font-heading {
+  font-family: 'Outfit', sans-serif;
 }
 
-.font-mono {
-  font-family: 'JetBrains Mono', monospace;
+body {
+  background-color: var(--bg-deep);
+  color: #f1f5f9;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Background animated glow ambient layers */
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ambient-orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(100px);
+  pointer-events: none;
+  z-index: 0;
+  animation: floatOrb 20s infinite alternate ease-in-out;
+}
+.orb-1 {
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.22), transparent 70%);
+  top: -100px;
+  left: -100px;
+}
+.orb-2 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.18), transparent 70%);
+  bottom: -100px;
+  right: -100px;
+  animation-delay: -7s;
+}
+.orb-3 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.15), transparent 70%);
+  top: 40%;
+  left: 60%;
+  animation-delay: -14s;
+}
+
+@keyframes floatOrb {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(60px, 40px) scale(1.15); }
+  100% { transform: translate(-40px, -60px) scale(0.9); }
 }
 
 /* Custom Scrollbar */
@@ -35,175 +85,289 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(6, 9, 19, 0.8);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.5);
-  border-radius: 4px;
+  background: linear-gradient(to bottom, #6366f1, #a855f7);
+  border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.8);
+  background: linear-gradient(to bottom, #4f46e5, #ec4899);
 }
 
-/* Glassmorphism panels */
+/* Glassmorphism Panels */
 .glass-panel {
-  background: rgba(30, 41, 59, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(8px);
+  background: rgba(30, 41, 59, 0.4);
+  backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .glass-card:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(99, 102, 241, 0.4);
-  transform: translateY(-2px);
+  background: rgba(30, 41, 59, 0.7);
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 8px 30px -4px rgba(99, 102, 241, 0.25);
+  transform: translateY(-3px);
 }
 
-/* Tic Tac Toe Grid */
+/* Neon Gradient Text Shimmer */
+.shimmer-text {
+  background: linear-gradient(90deg, #818cf8 0%, #c084fc 40%, #f472b6 80%, #818cf8 100%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: shine 4s linear infinite;
+}
+@keyframes shine {
+  to { background-position: 200% center; }
+}
+
+/* Glowing Border Buttons */
+.btn-glow-primary {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+  background-size: 200% auto;
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+  transition: all 0.3s ease;
+}
+.btn-glow-primary:hover {
+  background-position: right center;
+  box-shadow: 0 0 30px rgba(236, 72, 153, 0.6);
+  transform: translateY(-2px);
+}
+.btn-glow-primary:active {
+  transform: scale(0.97);
+}
+
+/* ============================================================== */
+/* GAME GRAPHICS 1: NEON CYBER TIC-TAC-TOE */
+/* ============================================================== */
 .ttt-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  max-width: 320px;
+  gap: 14px;
+  max-width: 340px;
   margin: 0 auto;
+  padding: 14px;
+  background: rgba(10, 15, 30, 0.85);
+  border-radius: 24px;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(99, 102, 241, 0.1);
 }
 .ttt-cell {
   aspect-ratio: 1;
-  background: rgba(30, 41, 59, 0.9);
-  border: 2px solid rgba(99, 102, 241, 0.3);
-  border-radius: 16px;
+  background: radial-gradient(circle at 50% 30%, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 3rem;
-  font-weight: 800;
+  font-size: 3.5rem;
+  font-weight: 900;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   user-select: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 .ttt-cell:hover:not(.taken) {
-  background: rgba(99, 102, 241, 0.2);
-  border-color: #6366f1;
-  transform: scale(1.03);
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.3), rgba(30, 41, 59, 0.8));
+  border-color: #818cf8;
+  box-shadow: 0 0 25px rgba(99, 102, 241, 0.5);
+  transform: scale(1.06);
 }
 .ttt-cell.taken {
   cursor: not-allowed;
 }
+.ttt-cell.cell-x {
+  color: #38bdf8;
+  text-shadow: 0 0 20px rgba(56, 189, 248, 0.8), 0 0 40px rgba(56, 189, 248, 0.4);
+}
+.ttt-cell.cell-o {
+  color: #f472b6;
+  text-shadow: 0 0 20px rgba(244, 114, 182, 0.8), 0 0 40px rgba(244, 114, 182, 0.4);
+}
 .ttt-cell.win {
-  background: rgba(34, 197, 94, 0.25) !important;
-  border-color: #22c55e !important;
-  color: #4ade80 !important;
-  animation: pulse 1.5s infinite;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.4), rgba(6, 78, 59, 0.9)) !important;
+  border-color: #34d399 !important;
+  color: #6ee7b7 !important;
+  text-shadow: 0 0 25px rgba(52, 211, 153, 1), 0 0 50px rgba(52, 211, 153, 0.8) !important;
+  animation: pulseWin 1.2s infinite alternate;
+}
+@keyframes pulseWin {
+  0% { transform: scale(1); filter: brightness(1); }
+  100% { transform: scale(1.05); filter: brightness(1.3); }
 }
 
-/* Connect 4 Board */
-.c4-board {
-  background: #1e3a8a;
-  padding: 12px;
-  border-radius: 20px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.2);
+/* ============================================================== */
+/* GAME GRAPHICS 2: 3D ARCADE CONNECT FOUR */
+/* ============================================================== */
+.c4-board-cabinet {
+  background: linear-gradient(180deg, #1e3a8a 0%, #172554 100%);
+  padding: 18px 18px 24px 18px;
+  border-radius: 28px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 0 3px rgba(59, 130, 246, 0.4), inset 0 2px 6px rgba(255, 255, 255, 0.3);
   display: inline-block;
+  position: relative;
+}
+.c4-board-cabinet::after {
+  content: '';
+  position: absolute;
+  bottom: -12px;
+  left: 10%;
+  right: 10%;
+  height: 12px;
+  background: #0f172a;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
 }
 .c4-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
+  gap: 10px;
 }
 .c4-col {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 12px;
-  transition: background 0.15s ease;
+  padding: 6px;
+  border-radius: 16px;
+  transition: all 0.2s ease;
 }
 .c4-col:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.15);
 }
 .c4-slot {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background: #0b0f19;
-  box-shadow: inset 0 4px 6px rgba(0, 0, 0, 0.6);
+  background: #080c18;
+  box-shadow: inset 0 6px 10px rgba(0, 0, 0, 0.9), inset 0 -2px 4px rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s ease;
+  position: relative;
+  overflow: hidden;
 }
+/* 3D Glossy Red Chip */
 .c4-slot.red {
-  background: radial-gradient(circle at 30% 30%, #ef4444, #991b1b);
-  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.5);
-  animation: dropIn 0.25s ease-out;
+  background: radial-gradient(circle at 35% 30%, #fca5a5 0%, #ef4444 35%, #991b1b 80%, #450a0a 100%);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.6), inset 0 3px 6px rgba(255, 255, 255, 0.6);
+  animation: dropPhysics 0.3s cubic-bezier(0.25, 1.4, 0.5, 1);
 }
+/* 3D Glossy Yellow Chip */
 .c4-slot.yellow {
-  background: radial-gradient(circle at 30% 30%, #facc15, #ca8a04);
-  box-shadow: 0 4px 10px rgba(250, 204, 21, 0.5);
-  animation: dropIn 0.25s ease-out;
+  background: radial-gradient(circle at 35% 30%, #fef08a 0%, #eab308 35%, #a16207 80%, #422006 100%);
+  box-shadow: 0 4px 15px rgba(234, 179, 8, 0.6), inset 0 3px 6px rgba(255, 255, 255, 0.6);
+  animation: dropPhysics 0.3s cubic-bezier(0.25, 1.4, 0.5, 1);
+}
+@keyframes dropPhysics {
+  0% { transform: translateY(-70px); opacity: 0; }
+  70% { transform: translateY(6px); }
+  100% { transform: translateY(0); opacity: 1; }
 }
 
-/* Rock Paper Scissors styles */
-.rps-choice-btn {
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+/* ============================================================== */
+/* GAME GRAPHICS 3: ROCK PAPER SCISSORS DUEL ARENA */
+/* ============================================================== */
+.rps-choice-card {
+  position: relative;
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 20px 10px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
 }
-.rps-choice-btn:hover {
-  transform: translateY(-6px) scale(1.08);
+.rps-choice-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, var(--primary-glow), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
-.rps-choice-btn:active {
-  transform: scale(0.95);
+.rps-choice-card:hover {
+  transform: translateY(-8px) scale(1.05);
+  border-color: #818cf8;
+  box-shadow: 0 12px 30px rgba(99, 102, 241, 0.35);
 }
-
-@keyframes dropIn {
-  from {
-    transform: translateY(-40px);
-    opacity: 0.3;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+.rps-choice-card:hover::before {
+  opacity: 1;
 }
-
-/* Animations */
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
-
-.animate-pulse-subtle {
-  animation: pulse 2s infinite ease-in-out;
-}
-
-/* Glow ripples */
-@keyframes ripple {
-  0% { transform: scale(0.95); opacity: 0.8; }
-  50% { transform: scale(1.15); opacity: 0.3; }
-  100% { transform: scale(0.95); opacity: 0.8; }
+.rps-choice-card.selected {
+  border-color: #ec4899;
+  background: linear-gradient(145deg, rgba(131, 24, 67, 0.5), rgba(80, 7, 36, 0.7));
+  box-shadow: 0 0 35px rgba(236, 72, 153, 0.5);
+  transform: translateY(-4px) scale(1.03);
 }
 
-.ripple-glow {
-  animation: ripple 2.5s infinite;
+.rps-hand-visual {
+  display: inline-block;
+  filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.6));
+  animation: floatHand 3s infinite ease-in-out;
+}
+@keyframes floatHand {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(-3deg); }
 }
 
-/* Avatar badge */
-.avatar-bubble {
+/* ============================================================== */
+/* CHAT & ROSTER ENHANCEMENTS */
+/* ============================================================== */
+.chat-bubble-me {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 60%, #a21caf 100%);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+  border-top-right-radius: 4px;
+}
+.chat-bubble-other {
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+  border-top-left-radius: 4px;
+}
+
+.avatar-frame {
+  position: relative;
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+.avatar-frame:hover {
+  border-color: #818cf8;
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+}
+
+/* Status ring beacon */
+.status-beacon {
   position: relative;
   display: inline-flex;
 }
-.avatar-bubble .status-dot {
+.status-beacon::before {
+  content: '';
   position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 12px;
-  height: 12px;
+  inset: -3px;
   border-radius: 50%;
-  border: 2px solid #0f172a;
+  background: #10b981;
+  opacity: 0.75;
+  animation: beaconPulse 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@keyframes beaconPulse {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  75%, 100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* Quiz Timer Animation */
+.quiz-timer-glow {
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
 }

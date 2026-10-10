@@ -554,7 +554,7 @@ function appendChatMessage(msg, scroll = true) {
   msgDiv.className = `flex gap-3 max-w-3xl ${isMe ? 'ml-auto flex-row-reverse' : ''}`;
 
   msgDiv.innerHTML = `
-    <div class="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700/80 flex items-center justify-center text-lg shrink-0 select-none">
+    <div class="avatar-frame w-10 h-10 rounded-2xl flex items-center justify-center text-xl shrink-0 select-none">
       ${msg.sender.avatar || '🎓'}
     </div>
     <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
@@ -563,10 +563,8 @@ function appendChatMessage(msg, scroll = true) {
         <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700">${msg.sender.studentId}</span>
         <span class="text-[10px] text-slate-500">${time}</span>
       </div>
-      <div class="p-3 rounded-2xl text-sm leading-relaxed ${
-        isMe 
-          ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-tr-none shadow-md shadow-indigo-600/20' 
-          : 'bg-slate-800/90 text-slate-100 rounded-tl-none border border-slate-700/60'
+      <div class="p-3.5 rounded-2xl text-sm leading-relaxed ${
+        isMe ? 'chat-bubble-me text-white' : 'chat-bubble-other text-slate-100'
       }">
         ${escapeHtml(msg.text)}
       </div>
@@ -812,10 +810,10 @@ function renderTTTState(room) {
   cells.forEach((cell, idx) => {
     const val = room.board[idx];
     cell.textContent = val || '';
-    cell.classList.remove('taken', 'text-indigo-400', 'text-pink-400', 'win');
+    cell.classList.remove('taken', 'text-indigo-400', 'text-pink-400', 'win', 'cell-x', 'cell-o');
     if (val) {
       cell.classList.add('taken');
-      cell.classList.add(val === 'X' ? 'text-indigo-400' : 'text-pink-400');
+      cell.classList.add(val === 'X' ? 'cell-x' : 'cell-o');
     }
     if (room.winLine && room.winLine.includes(idx)) cell.classList.add('win');
   });
@@ -918,11 +916,11 @@ window.submitRPSChoice = function(choice) {
     playSound('click');
     socket.emit('rps_choice', { roomId: currentRPSRoom, choice });
 
-    // Highlight selected button
+    // Highlight selected button with 3D glow
     ['rock', 'paper', 'scissors'].forEach(c => {
       const b = document.getElementById(`rps-btn-${c}`);
-      b.classList.remove('border-indigo-400', 'bg-indigo-950/60');
-      if (c === choice) b.classList.add('border-indigo-400', 'bg-indigo-950/60');
+      b.classList.remove('selected');
+      if (c === choice) b.classList.add('selected');
     });
   }
 };
