@@ -228,26 +228,37 @@ window.switchTab = function(tabName) {
 
 window.selectGame = function(gameKey) {
   currentGame = gameKey;
-  ['quiz', 'ttt', 'c4', 'rps'].forEach(g => {
-    document.getElementById(`game-container-${g}`).classList.add('hidden');
+  ['quiz', 'ttt', 'c4', 'rps', 'stumble'].forEach(g => {
+    const el = document.getElementById(`game-container-${g}`);
+    if (el) el.classList.add('hidden');
     const pill = document.getElementById(`game-pill-${g}`);
-    pill.classList.remove('bg-indigo-600', 'text-white', 'shadow');
-    pill.classList.add('text-slate-400');
+    if (pill) {
+      pill.classList.remove('bg-indigo-600', 'text-white', 'shadow');
+      pill.classList.add('text-slate-400');
+    }
   });
 
-  document.getElementById(`game-container-${gameKey}`).classList.remove('hidden');
+  const activeCont = document.getElementById(`game-container-${gameKey}`);
+  if (activeCont) activeCont.classList.remove('hidden');
   const activePill = document.getElementById(`game-pill-${gameKey}`);
-  activePill.classList.add('bg-indigo-600', 'text-white', 'shadow');
-  activePill.classList.remove('text-slate-400');
+  if (activePill) {
+    activePill.classList.add('bg-indigo-600', 'text-white', 'shadow');
+    activePill.classList.remove('text-slate-400');
+  }
+
+  if (gameKey === 'stumble' && typeof window.joinStumbleRoom === 'function') {
+    window.joinStumbleRoom();
+  }
 
   if (socket) {
     const gameNames = {
       quiz: '🧠 Quiz Battle',
       ttt: '⚔️ Tic-Tac-Toe',
       c4: '🔴 Connect Four',
-      rps: '✊ Rock Paper Scissors'
+      rps: '✊ Rock Paper Scissors',
+      stumble: '🏃 Stumble Dash'
     };
-    socket.emit('set_activity', gameNames[gameKey]);
+    socket.emit('set_activity', gameNames[gameKey] || 'Gaming');
   }
 };
 
@@ -381,6 +392,9 @@ function renderLoungeCards(users) {
           <button onclick="sendDirectChallenge('${u.studentId}', 'rps')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-indigo-600 border border-slate-700 text-white text-xs font-bold transition flex items-center gap-1.5" title="Challenge to Rock Paper Scissors">
             <span>✊ RPS</span>
           </button>
+          <button onclick="sendDirectChallenge('${u.studentId}', 'stumble')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 border border-slate-700 text-white text-xs font-bold transition flex items-center gap-1.5" title="Challenge to Stumble Dash">
+            <span>🏃 Dash</span>
+          </button>
         </div>
       ` : `
         <div class="text-xs text-slate-500 font-mono self-end sm:self-center">Online Now</div>
@@ -416,7 +430,8 @@ function handleChallengeReceived(data) {
   const gameNames = {
     ttt: '⚔️ Multiplayer Tic-Tac-Toe',
     c4: '🔴 Multiplayer Connect Four',
-    rps: '✊ Rock-Paper-Scissors Face-Off'
+    rps: '✊ Rock-Paper-Scissors Face-Off',
+    stumble: '🏃 Stumble Dash: Class Royale'
   };
   document.getElementById('challenge-popup-game').textContent = gameNames[data.gameType] || 'A Multiplayer Game';
 
@@ -447,6 +462,9 @@ window.acceptIncomingChallenge = function() {
   } else if (gameType === 'rps') {
     document.getElementById('rps-room-input').value = roomId;
     joinRPSRoom();
+  } else if (gameType === 'stumble') {
+    document.getElementById('stumble-room-input').value = roomId;
+    if (typeof window.joinStumbleRoom === 'function') window.joinStumbleRoom();
   }
 };
 
@@ -511,6 +529,9 @@ function initSocket() {
       } else if (gameType === 'rps') {
         document.getElementById('rps-room-input').value = roomId;
         joinRPSRoom();
+      } else if (gameType === 'stumble') {
+        document.getElementById('stumble-room-input').value = roomId;
+        if (typeof window.joinStumbleRoom === 'function') window.joinStumbleRoom();
       }
     } else {
       alert(`❌ ${respondent.name} declined the challenge.`);

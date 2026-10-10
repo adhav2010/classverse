@@ -351,7 +351,8 @@ const activeRooms = {
   ttt: new Map(),
   c4: new Map(),
   quiz: new Map(),
-  rps: new Map() // Multiplayer Rock Paper Scissors
+  rps: new Map(),
+  stumble: new Map() // Multiplayer Stumble Dash Royale
 };
 
 function getOnlineUsersList() {
@@ -994,9 +995,135 @@ io.on('connection', (socket) => {
         room.choices = {};
         emitRPSState(rId);
       }, 3000);
-    } else {
-      emitRPSState(rId);
     }
+  });
+
+  // ==========================================
+  // MULTIPLAYER GAME 5: STUMBLE DASH ROYALE
+  // ==========================================
+  socket.on('stumble_join', ({ roomId }) => {
+    if (!currentUser) return;
+    const rId = (roomId || 'DASH-ARENA').trim().toUpperCase();
+    socket.join('stumble_' + rId);
+
+    let room = activeRooms.stumble.get(rId);
+    if (!room) {
+      room = {
+        id: rId,
+        players: new Map(),
+        status: 'racing',
+        winner: null,
+        startTime: Date.now()
+      };
+      activeRooms.stumble.set(rId, room);
+    }
+
+    room.players.set(currentUser.id, {
+      id: currentUser.id,
+      name: currentUser.name,
+      studentId: currentUser.studentId,
+      avatar: currentUser.avatar || '🏃',
+      x: 60,
+      y: 200 + Math.random() * 80,
+      vx: 0,
+      vy: 0,
+      isJumping: false,
+      finished: false,
+      socketId: socket.id,
+      color: ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'][room.players.size % 6]
+    });
+
+    emitStumbleRacers(rId);
+  });
+
+  function emitStumbleRacers(rId) {
+    const room = activeRooms.stumble.get(rId);
+    if (!room) return;
+    const racers = Array.from(room.players.values()).map(p => ({
+      id: p.id,
+      name: p.name,
+      studentId: p.studentId,
+      avatar: p.avatar,
+      x: p.x,
+      y: p.y,
+      vx: p.vx,
+      vy: p.vy,
+      isJumping: p.isJumping,
+      finished: p.finished,
+      color: p.color
+    }));
+
+    io.to('stumble_' + rId).emit('stumble_racers', {
+      roomId: room.id,
+      status: room.status,
+      winner: room.winner,
+      racers
+    });
+  }
+
+  socket.on('stumble_move', ({ roomId, x, y, vx, vy, isJumping }) => {
+    if (!currentUser) return;
+    const rId = (roomId || 'DASH-ARENA').trim().toUpperCase();
+    const room = activeRooms.stumble.get(rId);
+    if (!room) return;
+
+    const player = room.players.get(currentUser.id);
+    if (player && !player.finished) {
+      player.x = x;
+      player.y = y;
+      player.vx = vx;
+      player.vy = vy;
+      player.isJumping = isJumping;
+
+      socket.to('stumble_' + rId).emit('stumble_racer_update', {
+        id: currentUser.id,
+        x, y, vx, vy, isJumping
+      });
+    }
+  });
+
+  socket.on('stumble_finish', ({ roomId }) => {
+    if (!currentUser) return;
+    const rId = (roomId || 'DASH-ARENA').trim().toUpperCase();
+    const room = activeRooms.stumble.get(rId);
+    if (!room) return;
+
+    const player = room.players.get(currentUser.id);
+    if (player && !player.finished) {
+      player.finished = true;
+      if (!room.winner) {
+        room.winner = {
+          id: currentUser.id,
+          name: currentUser.name,
+          studentId: currentUser.studentId,
+          avatar: currentUser.avatar
+        };
+        awardXP(currentUser.id, 75);
+      } else {
+        awardXP(currentUser.id, 25);
+      }
+      emitStumbleRacers(rId);
+    }
+  });
+
+  socket.on('stumble_restart', ({ roomId }) => {
+    const rId = (roomId || 'DASH-ARENA').trim().toUpperCase();
+    const room = activeRooms.stumble.get(rId);
+    if (!room) return;
+
+    room.status = 'racing';
+    room.winner = null;
+    room.players.forEach(p => {
+      p.x = 60;
+      p.y = 200 + Math.random() * 80;
+      p.vx = 0;
+      p.vy = 0;
+      p.isJumping = false;
+      p.finished = false;
+    });
+
+    emitStumbleRacers(rId);
+    io.to('stumble_' + rId).emit('stumble_reset_stage');
   });
 
   socket.on('disconnect', () => {
