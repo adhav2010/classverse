@@ -126,6 +126,11 @@ function launchApp() {
   joinTTTRoom();
   joinC4Room();
   joinRPSRoom();
+  if (typeof joinChessRoom === 'function') joinChessRoom(false);
+  if (typeof joinLudoRoom === 'function') joinLudoRoom();
+  if (typeof joinSnlRoom === 'function') joinSnlRoom();
+  if (typeof joinScribbleRoom === 'function') joinScribbleRoom();
+  if (typeof joinMafiaRoom === 'function') joinMafiaRoom();
 }
 
 function updateUserUI() {
@@ -304,7 +309,7 @@ window.switchTab = function(tabName) {
 
 window.selectGame = function(gameKey) {
   currentGame = gameKey;
-  ['quiz', 'ttt', 'c4', 'rps', 'stumble'].forEach(g => {
+  ['quiz', 'ttt', 'c4', 'rps', 'stumble', 'chess', 'ludo', 'snl', 'scribble', 'mafia'].forEach(g => {
     const el = document.getElementById(`game-container-${g}`);
     if (el) el.classList.add('hidden');
     const pill = document.getElementById(`game-pill-${g}`);
@@ -324,6 +329,16 @@ window.selectGame = function(gameKey) {
 
   if (gameKey === 'stumble' && typeof window.joinStumbleRoom === 'function') {
     window.joinStumbleRoom();
+  } else if (gameKey === 'chess' && typeof window.joinChessRoom === 'function') {
+    window.joinChessRoom(false);
+  } else if (gameKey === 'ludo' && typeof window.joinLudoRoom === 'function') {
+    window.joinLudoRoom();
+  } else if (gameKey === 'snl' && typeof window.joinSnlRoom === 'function') {
+    window.joinSnlRoom();
+  } else if (gameKey === 'scribble' && typeof window.joinScribbleRoom === 'function') {
+    window.joinScribbleRoom();
+  } else if (gameKey === 'mafia' && typeof window.joinMafiaRoom === 'function') {
+    window.joinMafiaRoom();
   }
 
   if (socket) {
@@ -332,7 +347,12 @@ window.selectGame = function(gameKey) {
       ttt: '⚔️ Tic-Tac-Toe',
       c4: '🔴 Connect Four',
       rps: '✊ Rock Paper Scissors',
-      stumble: '🏃 Stumble Dash'
+      stumble: '🏃 Stumble Dash',
+      chess: '♟️ Chess Grandmaster',
+      ludo: '🎲 Ludo Royale',
+      snl: '🐍 Snake & Ladder',
+      scribble: '🎨 Scribble Draw & Guess',
+      mafia: '🕵️ Mafia Village'
     };
     socket.emit('set_activity', gameNames[gameKey] || 'Gaming');
   }
@@ -458,17 +478,20 @@ function renderLoungeCards(users) {
       </div>
 
       ${!isMe ? `
-        <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
-          <button onclick="sendDirectChallenge('${u.studentId}', 'ttt')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-indigo-600 border border-slate-700 text-white text-xs font-bold transition flex items-center gap-1.5" title="Challenge to Tic-Tac-Toe">
+        <div class="flex items-center gap-1.5 self-end sm:self-center shrink-0 flex-wrap justify-end">
+          <button onclick="sendDirectChallenge('${u.studentId}', 'chess')" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-indigo-600 border border-slate-700 text-white text-xs font-bold transition flex items-center gap-1" title="Challenge to Chess">
+            <span>♟️ Chess</span>
+          </button>
+          <button onclick="sendDirectChallenge('${u.studentId}', 'ludo')" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-amber-600 border border-slate-700 text-white text-xs font-bold transition flex items-center gap-1" title="Challenge to Ludo">
+            <span>🎲 Ludo</span>
+          </button>
+          <button onclick="sendDirectChallenge('${u.studentId}', 'snl')" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 border border-slate-700 text-white text-xs font-bold transition flex items-center gap-1" title="Challenge to Snake & Ladder">
+            <span>🐍 Snake</span>
+          </button>
+          <button onclick="sendDirectChallenge('${u.studentId}', 'ttt')" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-indigo-600 border border-slate-700 text-white text-xs font-bold transition flex items-center gap-1" title="Challenge to Tic-Tac-Toe">
             <span>⚔️ TTT</span>
           </button>
-          <button onclick="sendDirectChallenge('${u.studentId}', 'c4')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-indigo-600 border border-slate-700 text-white text-xs font-bold transition flex items-center gap-1.5" title="Challenge to Connect Four">
-            <span>🔴 C4</span>
-          </button>
-          <button onclick="sendDirectChallenge('${u.studentId}', 'rps')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-indigo-600 border border-slate-700 text-white text-xs font-bold transition flex items-center gap-1.5" title="Challenge to Rock Paper Scissors">
-            <span>✊ RPS</span>
-          </button>
-          <button onclick="sendDirectChallenge('${u.studentId}', 'stumble')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 border border-slate-700 text-white text-xs font-bold transition flex items-center gap-1.5" title="Challenge to Stumble Dash">
+          <button onclick="sendDirectChallenge('${u.studentId}', 'stumble')" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 border border-slate-700 text-white text-xs font-bold transition flex items-center gap-1" title="Challenge to Stumble Dash">
             <span>🏃 Dash</span>
           </button>
         </div>
@@ -507,7 +530,12 @@ function handleChallengeReceived(data) {
     ttt: '⚔️ Multiplayer Tic-Tac-Toe',
     c4: '🔴 Multiplayer Connect Four',
     rps: '✊ Rock-Paper-Scissors Face-Off',
-    stumble: '🏃 Stumble Dash: Class Royale'
+    stumble: '🏃 Stumble Dash: Class Royale',
+    chess: '♟️ Grandmaster Chess Duel',
+    ludo: '🎲 Ludo Royale Face-Off',
+    snl: '🐍 Snake & Ladder Race',
+    scribble: '🎨 Scribble Draw & Guess',
+    mafia: '🕵️ Mafia Social Deduction'
   };
   document.getElementById('challenge-popup-game').textContent = gameNames[data.gameType] || 'A Multiplayer Game';
 
@@ -541,6 +569,26 @@ window.acceptIncomingChallenge = function() {
   } else if (gameType === 'stumble') {
     document.getElementById('stumble-room-input').value = roomId;
     if (typeof window.joinStumbleRoom === 'function') window.joinStumbleRoom();
+  } else if (gameType === 'chess') {
+    const el = document.getElementById('chess-room-input');
+    if (el) el.value = roomId;
+    if (typeof window.joinChessRoom === 'function') window.joinChessRoom(false);
+  } else if (gameType === 'ludo') {
+    const el = document.getElementById('ludo-room-input');
+    if (el) el.value = roomId;
+    if (typeof window.joinLudoRoom === 'function') window.joinLudoRoom();
+  } else if (gameType === 'snl') {
+    const el = document.getElementById('snl-room-input');
+    if (el) el.value = roomId;
+    if (typeof window.joinSnlRoom === 'function') window.joinSnlRoom();
+  } else if (gameType === 'scribble') {
+    const el = document.getElementById('scribble-room-input');
+    if (el) el.value = roomId;
+    if (typeof window.joinScribbleRoom === 'function') window.joinScribbleRoom();
+  } else if (gameType === 'mafia') {
+    const el = document.getElementById('mafia-room-input');
+    if (el) el.value = roomId;
+    if (typeof window.joinMafiaRoom === 'function') window.joinMafiaRoom();
   }
 };
 
@@ -608,6 +656,26 @@ function initSocket() {
       } else if (gameType === 'stumble') {
         document.getElementById('stumble-room-input').value = roomId;
         if (typeof window.joinStumbleRoom === 'function') window.joinStumbleRoom();
+      } else if (gameType === 'chess') {
+        const el = document.getElementById('chess-room-input');
+        if (el) el.value = roomId;
+        if (typeof window.joinChessRoom === 'function') window.joinChessRoom(false);
+      } else if (gameType === 'ludo') {
+        const el = document.getElementById('ludo-room-input');
+        if (el) el.value = roomId;
+        if (typeof window.joinLudoRoom === 'function') window.joinLudoRoom();
+      } else if (gameType === 'snl') {
+        const el = document.getElementById('snl-room-input');
+        if (el) el.value = roomId;
+        if (typeof window.joinSnlRoom === 'function') window.joinSnlRoom();
+      } else if (gameType === 'scribble') {
+        const el = document.getElementById('scribble-room-input');
+        if (el) el.value = roomId;
+        if (typeof window.joinScribbleRoom === 'function') window.joinScribbleRoom();
+      } else if (gameType === 'mafia') {
+        const el = document.getElementById('mafia-room-input');
+        if (el) el.value = roomId;
+        if (typeof window.joinMafiaRoom === 'function') window.joinMafiaRoom();
       }
     } else {
       alert(`❌ ${respondent.name} declined the challenge.`);

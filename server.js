@@ -7,6 +7,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
+const { Chess } = require('chess.js');
 
 const JWT_SECRET = 'classverse_secret_key_2026_classroom_super_secure';
 const PORT = process.env.PORT || 3000;
@@ -402,7 +403,12 @@ const activeRooms = {
   c4: new Map(),
   quiz: new Map(),
   rps: new Map(),
-  stumble: new Map() // Multiplayer Stumble Dash Royale
+  stumble: new Map(), // Multiplayer Stumble Dash Royale
+  chess: new Map(),   // Multiplayer Chess with Spectators
+  ludo: new Map(),    // Multiplayer 4-Player Ludo
+  snl: new Map(),     // Snake and Ladder
+  scribble: new Map(),// Skribbl Draw & Guess
+  mafia: new Map()    // Mafia Social Deduction
 };
 
 function getOnlineUsersList() {
@@ -1174,6 +1180,956 @@ io.on('connection', (socket) => {
 
     emitStumbleRacers(rId);
     io.to('stumble_' + rId).emit('stumble_reset_stage');
+  });
+
+  // ==========================================
+  // MULTIPLAYER GAME 6: CHESS WITH SPECTATORS
+  // ==========================================
+  socket.on('chess_join', ({ roomId, asSpectator }) => {
+    if (!currentUser) return;
+    const rId = (roomId || 'GRANDMASTER-1').trim().toUpperCase();
+    socket.join('chess_' + rId);
+
+    let room = activeRooms.chess.get(rId);
+    if (!room) {
+      room = {
+        id: rId,
+        chess: new Chess(),
+        players: { white: null, black: null },
+        spectators: [],
+        status: 'waiting',
+        winner: null,
+        history: [],
+        lastMove: null
+      };
+      activeRooms.chess.set(rId, room);
+    }
+
+    const isWhite = room.players.white && room.players.white.id === currentUser.id;
+    const isBlack = room.players.black && room.players.black.id === currentUser.id;
+
+    if (isWhite) {
+      room.players.white.socketId = socket.id;
+    } else if (isBlack) {
+      room.players.black.socketId = socket.id;
+    } else if (!asSpectator && !room.players.white) {
+      room.players.white = {
+        id: currentUser.id,
+        name: currentUser.name,
+        studentId: currentUser.studentId,
+        avatar: currentUser.avatar,
+        socketId: socket.id
+      };
+    } else if (!asSpectator && !room.players.black) {
+      room.players.black = {
+        id: currentUser.id,
+        name: currentUser.name,
+        studentId: currentUser.studentId,
+        avatar: currentUser.avatar,
+        socketId: socket.id
+      };
+      if (room.players.white) room.status = 'playing';
+    } else {
+      const specIdx = room.spectators.findIndex(s => s.id === currentUser.id);
+      if (specIdx === -1) {
+        room.spectators.push({
+          id: currentUser.id,
+          name: currentUser.name,
+          studentId: currentUser.studentId,
+          avatar: currentUser.avatar,
+          socketId: socket.id
+        });
+      } else {
+        room.spectators[specIdx].socketId = socket.id;
+      }
+    }
+
+    emitChessState(rId);
+  });
+
+  function emitChessState(rId) {
+    const room = activeRooms.chess.get(rId);
+    if (!room) return;
+
+    io.to('chess_' + rId).emit('chess_state', {
+      id: room.id,
+      fen: room.chess.fen(),
+      turn: room.chess.turn(),
+      status: room.status,
+      winner: room.winner,
+      whitePlayer: room.players.white,
+      blackPlayer: room.players.black,
+      spectators: room.spectators,
+      history: room.history,
+      lastMove: room.lastMove,
+      inCheck: room.chess.inCheck(),
+      isCheckmate: room.chess.isCheckmate(),
+      isDraw: room.chess.isDraw()
+    });
+  }
+
+  socket.on('chess_move', ({ roomId, from, to, promotion }) => {
+    if (!currentUser) return;
+    const rId = (roomId || 'GRANDMASTER-1').trim().toUpperCase();
+    const room = activeRooms.chess.get(rId);
+    if (!room || room.status !== 'playing') return;
+
+    const currentTurn = room.chess.turn();
+    const isWhiteTurn = currentTurn === 'w';
+    const playerExpected = isWhiteTurn ? room.players.white : room.players.black;
+
+    if (!playerExpected || playerExpected.id !== currentUser.id) {
+      return socket.emit('chess_error', "It is not your turn!");
+    }
+
+    try {
+      const move = room.chess.move({
+        from,
+        to,
+        promotion: promotion || 'q'
+      });
+
+      if (!move) {
+        return socket.emit('chess_error', "Illegal move!");
+      }
+
+      room.lastMove = { from, to };
+      room.history.push(move.san);
+
+      if (room.chess.isCheckmate()) {
+        room.status = 'checkmate';
+        room.winner = isWhiteTurn ? 'white' : 'black';
+        awardXP(playerExpected.id, 60);
+      } else if (room.chess.isDraw()) {
+        room.status = 'draw';
+      }
+
+      emitChessState(rId);
+    } catch (err) {
+      socket.emit('chess_error', err.message);
+    }
+  });
+
+  socket.on('chess_cheer', ({ roomId, emoji }) => {
+    if (!currentUser) return;
+    const rId = (roomId || 'GRANDMASTER-1').trim().toUpperCase();
+    io.to('chess_' + rId).emit('chess_cheer_event', {
+      sender: currentUser.name,
+      avatar: currentUser.avatar,
+      emoji: emoji || '👏'
+    });
+  });
+
+  socket.on('chess_rematch', ({ roomId }) => {
+    const rId = (roomId || 'GRANDMASTER-1').trim().toUpperCase();
+    const room = activeRooms.chess.get(rId);
+    if (!room) return;
+
+    room.chess = new Chess();
+    room.status = (room.players.white && room.players.black) ? 'playing' : 'waiting';
+    room.winner = null;
+    room.history = [];
+    room.lastMove = null;
+    emitChessState(rId);
+  });
+
+  // ==========================================
+  // MULTIPLAYER GAME 7: LUDO ROYALE (2-4 PLAYERS)
+  // ==========================================
+  const LUDO_COLORS = ['red', 'green', 'yellow', 'blue'];
+  const LUDO_SAFE_TILES = [0, 8, 13, 21, 26, 34, 39, 47];
+  const LUDO_START_OFFSETS = { red: 0, green: 13, yellow: 26, blue: 39 };
+
+  socket.on('ludo_join', ({ roomId }) => {
+    if (!currentUser) return;
+    const rId = (roomId || 'LUDO-CLUB').trim().toUpperCase();
+    socket.join('ludo_' + rId);
+
+    let room = activeRooms.ludo.get(rId);
+    if (!room) {
+      room = {
+        id: rId,
+        players: [],
+        status: 'lobby',
+        turnIndex: 0,
+        diceValue: null,
+        canRoll: true,
+        movableTokens: [],
+        winner: null,
+        historyLog: []
+      };
+      activeRooms.ludo.set(rId, room);
+    }
+
+    const existing = room.players.find(p => p.id === currentUser.id);
+    if (!existing && room.players.length < 4 && room.status === 'lobby') {
+      const assignedColor = LUDO_COLORS[room.players.length];
+      room.players.push({
+        id: currentUser.id,
+        name: currentUser.name,
+        studentId: currentUser.studentId,
+        avatar: currentUser.avatar,
+        color: assignedColor,
+        tokens: [-1, -1, -1, -1]
+      });
+      room.historyLog.push(`${currentUser.name} joined as ${assignedColor.toUpperCase()}!`);
+    }
+
+    emitLudoState(rId);
+  });
+
+  function emitLudoState(rId) {
+    const room = activeRooms.ludo.get(rId);
+    if (!room) return;
+    io.to('ludo_' + rId).emit('ludo_state', room);
+  }
+
+  socket.on('ludo_start', ({ roomId }) => {
+    const rId = (roomId || 'LUDO-CLUB').trim().toUpperCase();
+    const room = activeRooms.ludo.get(rId);
+    if (!room || room.players.length < 2) return;
+
+    room.status = 'playing';
+    room.turnIndex = 0;
+    room.canRoll = true;
+    room.diceValue = null;
+    room.movableTokens = [];
+    room.winner = null;
+    room.historyLog.push(`Game started! ${room.players[0].name}'s turn.`);
+    emitLudoState(rId);
+  });
+
+  socket.on('ludo_roll_dice', ({ roomId }) => {
+    if (!currentUser) return;
+    const rId = (roomId || 'LUDO-CLUB').trim().toUpperCase();
+    const room = activeRooms.ludo.get(rId);
+    if (!room || room.status !== 'playing' || !room.canRoll) return;
+
+    const currentPlayer = room.players[room.turnIndex];
+    if (currentPlayer.id !== currentUser.id) return;
+
+    const roll = Math.floor(Math.random() * 6) + 1;
+    room.diceValue = roll;
+    room.canRoll = false;
+
+    const movable = [];
+    currentPlayer.tokens.forEach((pos, idx) => {
+      if (pos === -1) {
+        if (roll === 6) movable.push(idx);
+      } else if (pos < 106) {
+        if (pos >= 100) {
+          if (pos + roll <= 106) movable.push(idx);
+        } else {
+          movable.push(idx);
+        }
+      }
+    });
+
+    room.movableTokens = movable;
+    room.historyLog.push(`${currentPlayer.name} rolled a ${roll}!`);
+    if (room.historyLog.length > 20) room.historyLog.shift();
+
+    if (movable.length === 0) {
+      emitLudoState(rId);
+      setTimeout(() => {
+        advanceLudoTurn(rId, roll === 6);
+      }, 1000);
+    } else if (movable.length === 1) {
+      emitLudoState(rId);
+      setTimeout(() => {
+        executeLudoMove(rId, currentPlayer.id, movable[0]);
+      }, 700);
+    } else {
+      emitLudoState(rId);
+    }
+  });
+
+  socket.on('ludo_select_token', ({ roomId, tokenIndex }) => {
+    if (!currentUser) return;
+    const rId = (roomId || 'LUDO-CLUB').trim().toUpperCase();
+    const room = activeRooms.ludo.get(rId);
+    if (!room || room.status !== 'playing') return;
+
+    const currentPlayer = room.players[room.turnIndex];
+    if (currentPlayer.id !== currentUser.id) return;
+    if (!room.movableTokens.includes(tokenIndex)) return;
+
+    executeLudoMove(rId, currentUser.id, tokenIndex);
+  });
+
+  function executeLudoMove(rId, playerId, tokenIndex) {
+    const room = activeRooms.ludo.get(rId);
+    if (!room || room.status !== 'playing') return;
+
+    const player = room.players[room.turnIndex];
+    if (player.id !== playerId) return;
+
+    const roll = room.diceValue;
+    const oldPos = player.tokens[tokenIndex];
+    let newPos = oldPos;
+    let bonusTurn = (roll === 6);
+
+    const startOffset = LUDO_START_OFFSETS[player.color];
+
+    if (oldPos === -1 && roll === 6) {
+      newPos = startOffset;
+      room.historyLog.push(`${player.name} deployed a token to start!`);
+    } else if (oldPos >= 100) {
+      newPos = oldPos + roll;
+      if (newPos === 106) {
+        room.historyLog.push(`🌟 ${player.name}'s token reached Home!`);
+        bonusTurn = true;
+      }
+    } else if (oldPos >= 0) {
+      const stepsTraveled = (oldPos - startOffset + 52) % 52;
+      if (stepsTraveled + roll >= 51) {
+        const corridorStep = (stepsTraveled + roll) - 51;
+        newPos = 100 + corridorStep;
+        if (newPos >= 106) {
+          newPos = 106;
+          room.historyLog.push(`🌟 ${player.name}'s token reached Home!`);
+          bonusTurn = true;
+        }
+      } else {
+        newPos = (oldPos + roll) % 52;
+
+        if (!LUDO_SAFE_TILES.includes(newPos)) {
+          room.players.forEach(other => {
+            if (other.id !== player.id) {
+              other.tokens.forEach((oPos, oIdx) => {
+                if (oPos === newPos) {
+                  other.tokens[oIdx] = -1;
+                  bonusTurn = true;
+                  room.historyLog.push(`💥 ${player.name} captured ${other.name}'s token! Bonus roll!`);
+                }
+              });
+            }
+          });
+        }
+      }
+    }
+
+    player.tokens[tokenIndex] = newPos;
+
+    if (player.tokens.every(t => t === 106)) {
+      room.status = 'finished';
+      room.winner = player;
+      awardXP(player.id, 80);
+      room.historyLog.push(`🏆 ${player.name} WON THE LUDO MATCH!`);
+      emitLudoState(rId);
+      return;
+    }
+
+    advanceLudoTurn(rId, bonusTurn);
+  }
+
+  function advanceLudoTurn(rId, bonusTurn) {
+    const room = activeRooms.ludo.get(rId);
+    if (!room || room.status !== 'playing') return;
+
+    if (!bonusTurn) {
+      room.turnIndex = (room.turnIndex + 1) % room.players.length;
+    }
+    room.canRoll = true;
+    room.diceValue = null;
+    room.movableTokens = [];
+    emitLudoState(rId);
+  }
+
+  socket.on('ludo_reset', ({ roomId }) => {
+    const rId = (roomId || 'LUDO-CLUB').trim().toUpperCase();
+    const room = activeRooms.ludo.get(rId);
+    if (!room) return;
+
+    room.players.forEach(p => p.tokens = [-1, -1, -1, -1]);
+    room.status = 'lobby';
+    room.turnIndex = 0;
+    room.canRoll = true;
+    room.diceValue = null;
+    room.movableTokens = [];
+    room.winner = null;
+    room.historyLog = [];
+    emitLudoState(rId);
+  });
+
+  // ==========================================
+  // MULTIPLAYER GAME 8: SNAKE AND LADDER
+  // ==========================================
+  const SNL_LADDERS = { 4: 14, 8: 30, 20: 42, 28: 76, 36: 44, 51: 67, 71: 92, 80: 99 };
+  const SNL_SNAKES = { 98: 28, 95: 56, 92: 51, 83: 19, 73: 1, 69: 33, 64: 36, 59: 17, 52: 11, 48: 9 };
+  const SNL_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
+
+  socket.on('snl_join', ({ roomId }) => {
+    if (!currentUser) return;
+    const rId = (roomId || 'SNAKE-ARENA').trim().toUpperCase();
+    socket.join('snl_' + rId);
+
+    let room = activeRooms.snl.get(rId);
+    if (!room) {
+      room = {
+        id: rId,
+        players: [],
+        turnIndex: 0,
+        status: 'playing',
+        lastRoll: null,
+        winner: null,
+        log: []
+      };
+      activeRooms.snl.set(rId, room);
+    }
+
+    let p = room.players.find(x => x.id === currentUser.id);
+    if (!p && room.players.length < 6) {
+      room.players.push({
+        id: currentUser.id,
+        name: currentUser.name,
+        studentId: currentUser.studentId,
+        avatar: currentUser.avatar,
+        position: 1,
+        color: SNL_COLORS[room.players.length % SNL_COLORS.length]
+      });
+      room.log.push(`${currentUser.name} joined the board!`);
+    }
+
+    emitSnlState(rId);
+  });
+
+  function emitSnlState(rId) {
+    const room = activeRooms.snl.get(rId);
+    if (!room) return;
+    io.to('snl_' + rId).emit('snl_state', room);
+  }
+
+  socket.on('snl_roll', ({ roomId }) => {
+    if (!currentUser) return;
+    const rId = (roomId || 'SNAKE-ARENA').trim().toUpperCase();
+    const room = activeRooms.snl.get(rId);
+    if (!room || room.players.length === 0 || room.winner) return;
+
+    const currentPlayer = room.players[room.turnIndex];
+    if (currentPlayer.id !== currentUser.id) return;
+
+    const roll = Math.floor(Math.random() * 6) + 1;
+    room.lastRoll = roll;
+
+    let target = currentPlayer.position + roll;
+    if (target > 100) {
+      room.log.push(`${currentPlayer.name} rolled a ${roll} but needed exact roll to reach 100!`);
+    } else {
+      let eventText = `${currentPlayer.name} rolled ${roll} and moved to ${target}.`;
+      if (SNL_LADDERS[target]) {
+        const climbedTo = SNL_LADDERS[target];
+        eventText = `🪜 ${currentPlayer.name} rolled ${roll} and CLIMBED A LADDER from ${target} to ${climbedTo}!`;
+        target = climbedTo;
+      } else if (SNL_SNAKES[target]) {
+        const bittenTo = SNL_SNAKES[target];
+        eventText = `🐍 Oh no! ${currentPlayer.name} rolled ${roll} and WAS BITTEN BY A SNAKE at ${target}, sliding to ${bittenTo}!`;
+        target = bittenTo;
+      }
+      currentPlayer.position = target;
+      room.log.push(eventText);
+
+      if (target === 100) {
+        room.winner = currentPlayer;
+        room.log.push(`🎉 👑 ${currentPlayer.name} WON THE SNAKE & LADDER RACE!`);
+        awardXP(currentPlayer.id, 60);
+      }
+    }
+
+    if (room.log.length > 25) room.log.shift();
+
+    if (!room.winner) {
+      room.turnIndex = (room.turnIndex + 1) % room.players.length;
+    }
+
+    emitSnlState(rId);
+  });
+
+  socket.on('snl_reset', ({ roomId }) => {
+    const rId = (roomId || 'SNAKE-ARENA').trim().toUpperCase();
+    const room = activeRooms.snl.get(rId);
+    if (!room) return;
+
+    room.players.forEach(p => p.position = 1);
+    room.turnIndex = 0;
+    room.lastRoll = null;
+    room.winner = null;
+    room.log = [`Game reset! Roll to begin.`];
+    emitSnlState(rId);
+  });
+
+  // ==========================================
+  // MULTIPLAYER GAME 9: SCRIBBLE (SKRIBBL DRAW & GUESS)
+  // ==========================================
+  const SCRIBBLE_WORDS = [
+    'Pizza', 'Guitar', 'Rocket', 'Castle', 'Elephant', 'Rainbow', 'Computer',
+    'Volcano', 'Spider', 'Airplane', 'Telescope', 'Basketball', 'Dragon',
+    'Camera', 'Helicopter', 'Penguin', 'Diamond', 'Campfire', 'Crown',
+    'Skateboard', 'Bicycle', 'Cupcake', 'Mermaid', 'Submarine', 'Unicorn'
+  ];
+
+  socket.on('scribble_join', ({ roomId }) => {
+    if (!currentUser) return;
+    const rId = (roomId || 'SCRIBBLE-LOUNGE').trim().toUpperCase();
+    socket.join('scribble_' + rId);
+
+    let room = activeRooms.scribble.get(rId);
+    if (!room) {
+      room = {
+        id: rId,
+        players: [],
+        status: 'lobby',
+        artistIndex: 0,
+        word: '',
+        maskedWord: '',
+        hintsRevealed: 0,
+        timeLeft: 60,
+        round: 1,
+        totalRounds: 3,
+        strokes: [],
+        guessedUsers: new Set(),
+        chatLog: []
+      };
+      activeRooms.scribble.set(rId, room);
+    }
+
+    let p = room.players.find(x => x.id === currentUser.id);
+    if (!p) {
+      room.players.push({
+        id: currentUser.id,
+        name: currentUser.name,
+        studentId: currentUser.studentId,
+        avatar: currentUser.avatar,
+        score: 0
+      });
+      room.chatLog.push({ system: true, text: `${currentUser.name} joined Scribble!` });
+    }
+
+    emitScribbleState(rId);
+  });
+
+  function emitScribbleState(rId) {
+    const room = activeRooms.scribble.get(rId);
+    if (!room) return;
+
+    const currentArtist = room.players[room.artistIndex];
+    io.to('scribble_' + rId).emit('scribble_state', {
+      id: room.id,
+      players: room.players,
+      status: room.status,
+      artist: currentArtist,
+      maskedWord: room.maskedWord,
+      timeLeft: room.timeLeft,
+      round: room.round,
+      totalRounds: room.totalRounds,
+      chatLog: room.chatLog
+    });
+
+    if (currentArtist && room.status === 'drawing') {
+      const artistSession = Array.from(onlineSockets.values()).find(s => s.user.id === currentArtist.id);
+      if (artistSession) {
+        io.to(artistSession.socketId).emit('scribble_secret_word', room.word);
+      }
+    }
+  }
+
+  socket.on('scribble_start', ({ roomId }) => {
+    const rId = (roomId || 'SCRIBBLE-LOUNGE').trim().toUpperCase();
+    const room = activeRooms.scribble.get(rId);
+    if (!room || room.players.length < 2) return;
+
+    startScribbleRound(rId);
+  });
+
+  function startScribbleRound(rId) {
+    const room = activeRooms.scribble.get(rId);
+    if (!room) return;
+
+    clearInterval(room.timerInterval);
+    const randomWord = SCRIBBLE_WORDS[Math.floor(Math.random() * SCRIBBLE_WORDS.length)];
+    room.word = randomWord;
+    room.maskedWord = randomWord.replace(/[a-zA-Z]/g, '_ ');
+    room.hintsRevealed = 0;
+    room.timeLeft = 60;
+    room.status = 'drawing';
+    room.strokes = [];
+    room.guessedUsers = new Set();
+
+    io.to('scribble_' + rId).emit('scribble_clear_canvas');
+    emitScribbleState(rId);
+
+    room.timerInterval = setInterval(() => {
+      room.timeLeft--;
+      if (room.timeLeft === 35 || room.timeLeft === 15) {
+        revealScribbleHint(room);
+      }
+
+      if (room.timeLeft <= 0) {
+        clearInterval(room.timerInterval);
+        endScribbleRound(rId, "Time's up!");
+      } else {
+        io.to('scribble_' + rId).emit('scribble_tick', { timeLeft: room.timeLeft, maskedWord: room.maskedWord });
+      }
+    }, 1000);
+  }
+
+  function revealScribbleHint(room) {
+    const word = room.word;
+    const indices = [];
+    for (let i = 0; i < word.length; i++) indices.push(i);
+    const unrevealed = indices.filter(i => room.maskedWord[i * 2] === '_');
+    if (unrevealed.length > 0) {
+      const pick = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+      const chars = room.maskedWord.split('');
+      chars[pick * 2] = word[pick].toUpperCase();
+      room.maskedWord = chars.join('');
+    }
+  }
+
+  socket.on('scribble_draw_step', ({ roomId, drawData }) => {
+    if (!currentUser) return;
+    const rId = (roomId || 'SCRIBBLE-LOUNGE').trim().toUpperCase();
+    const room = activeRooms.scribble.get(rId);
+    if (!room || room.status !== 'drawing') return;
+
+    const currentArtist = room.players[room.artistIndex];
+    if (currentArtist && currentArtist.id === currentUser.id) {
+      socket.to('scribble_' + rId).emit('scribble_draw_step', drawData);
+    }
+  });
+
+  socket.on('scribble_clear', ({ roomId }) => {
+    if (!currentUser) return;
+    const rId = (roomId || 'SCRIBBLE-LOUNGE').trim().toUpperCase();
+    const room = activeRooms.scribble.get(rId);
+    if (!room || room.status !== 'drawing') return;
+
+    const currentArtist = room.players[room.artistIndex];
+    if (currentArtist && currentArtist.id === currentUser.id) {
+      io.to('scribble_' + rId).emit('scribble_clear_canvas');
+    }
+  });
+
+  socket.on('scribble_guess', ({ roomId, text }) => {
+    if (!currentUser || !text || !text.trim()) return;
+    const rId = (roomId || 'SCRIBBLE-LOUNGE').trim().toUpperCase();
+    const room = activeRooms.scribble.get(rId);
+    if (!room || room.status !== 'drawing') return;
+
+    const currentArtist = room.players[room.artistIndex];
+    if (currentArtist && currentArtist.id === currentUser.id) return;
+
+    const guess = text.trim().toLowerCase();
+    const answer = room.word.toLowerCase();
+
+    if (guess === answer) {
+      if (!room.guessedUsers.has(currentUser.id)) {
+        room.guessedUsers.add(currentUser.id);
+        const points = Math.max(50, room.timeLeft * 8);
+        const guesser = room.players.find(p => p.id === currentUser.id);
+        if (guesser) guesser.score += points;
+        if (currentArtist) currentArtist.score += 40;
+
+        awardXP(currentUser.id, 15);
+        room.chatLog.push({ system: true, text: `🎉 ${currentUser.name} guessed the word! (+${points} pts)` });
+        emitScribbleState(rId);
+
+        if (room.guessedUsers.size >= room.players.length - 1) {
+          clearInterval(room.timerInterval);
+          endScribbleRound(rId, "Everyone guessed the word!");
+        }
+      }
+    } else {
+      room.chatLog.push({ sender: currentUser.name, text: text.trim() });
+      if (room.chatLog.length > 30) room.chatLog.shift();
+      io.to('scribble_' + rId).emit('scribble_chat', { sender: currentUser.name, text: text.trim() });
+    }
+  });
+
+  function endScribbleRound(rId, reason) {
+    const room = activeRooms.scribble.get(rId);
+    if (!room) return;
+
+    room.status = 'reveal';
+    room.chatLog.push({ system: true, text: `Round over! ${reason} The word was: ${room.word.toUpperCase()}` });
+    emitScribbleState(rId);
+
+    setTimeout(() => {
+      room.artistIndex = (room.artistIndex + 1) % room.players.length;
+      if (room.artistIndex === 0) room.round++;
+
+      if (room.round > room.totalRounds) {
+        room.status = 'game_over';
+        emitScribbleState(rId);
+      } else {
+        startScribbleRound(rId);
+      }
+    }, 4000);
+  }
+
+  // ==========================================
+  // MULTIPLAYER GAME 10: MAFIA (SOCIAL DEDUCTION)
+  // ==========================================
+  socket.on('mafia_join', ({ roomId }) => {
+    if (!currentUser) return;
+    const rId = (roomId || 'MAFIA-MANOR').trim().toUpperCase();
+    socket.join('mafia_' + rId);
+
+    let room = activeRooms.mafia.get(rId);
+    if (!room) {
+      room = {
+        id: rId,
+        players: [],
+        phase: 'lobby',
+        round: 1,
+        timeLeft: 30,
+        nightActions: { killTarget: null, protectTarget: null, inspectTarget: null },
+        votes: {},
+        winner: null,
+        log: []
+      };
+      activeRooms.mafia.set(rId, room);
+    }
+
+    let p = room.players.find(x => x.id === currentUser.id);
+    if (!p && room.phase === 'lobby') {
+      room.players.push({
+        id: currentUser.id,
+        name: currentUser.name,
+        studentId: currentUser.studentId,
+        avatar: currentUser.avatar,
+        role: 'villager',
+        isAlive: true,
+        socketId: socket.id
+      });
+      room.log.push(`${currentUser.name} entered the village.`);
+    } else if (p) {
+      p.socketId = socket.id;
+    }
+
+    emitMafiaState(rId);
+  });
+
+  function emitMafiaState(rId) {
+    const room = activeRooms.mafia.get(rId);
+    if (!room) return;
+
+    const publicPlayers = room.players.map(p => ({
+      id: p.id,
+      name: p.name,
+      avatar: p.avatar,
+      isAlive: p.isAlive,
+      role: room.phase === 'ended' || !p.isAlive ? p.role : 'hidden'
+    }));
+
+    io.to('mafia_' + rId).emit('mafia_state', {
+      id: room.id,
+      players: publicPlayers,
+      phase: room.phase,
+      round: room.round,
+      timeLeft: room.timeLeft,
+      winner: room.winner,
+      log: room.log,
+      votes: room.votes
+    });
+
+    room.players.forEach(p => {
+      io.to(p.socketId).emit('mafia_my_role', { role: p.role, isAlive: p.isAlive });
+    });
+  }
+
+  socket.on('mafia_start', ({ roomId }) => {
+    const rId = (roomId || 'MAFIA-MANOR').trim().toUpperCase();
+    const room = activeRooms.mafia.get(rId);
+    if (!room || room.players.length < 3) {
+      return socket.emit('mafia_error', "At least 3 players are required to start Mafia!");
+    }
+
+    const shuffled = [...room.players].sort(() => 0.5 - Math.random());
+    shuffled.forEach(p => { p.role = 'villager'; p.isAlive = true; });
+
+    shuffled[0].role = 'mafia';
+    if (shuffled.length >= 2) shuffled[1].role = 'doctor';
+    if (shuffled.length >= 3) shuffled[2].role = 'detective';
+    if (shuffled.length >= 6) shuffled[3].role = 'mafia';
+
+    room.phase = 'night';
+    room.round = 1;
+    room.winner = null;
+    room.log = [`🌙 Night falls over the village. Close your eyes... Night creatures awake!`];
+    startMafiaNight(rId);
+  });
+
+  function startMafiaNight(rId) {
+    const room = activeRooms.mafia.get(rId);
+    if (!room) return;
+
+    clearInterval(room.timerInterval);
+    room.phase = 'night';
+    room.timeLeft = 25;
+    room.nightActions = { killTarget: null, protectTarget: null, inspectTarget: null };
+
+    emitMafiaState(rId);
+
+    room.timerInterval = setInterval(() => {
+      room.timeLeft--;
+      if (room.timeLeft <= 0) {
+        clearInterval(room.timerInterval);
+        resolveMafiaNight(rId);
+      } else {
+        io.to('mafia_' + rId).emit('mafia_tick', { timeLeft: room.timeLeft });
+      }
+    }, 1000);
+  }
+
+  socket.on('mafia_action', ({ roomId, type, targetId }) => {
+    if (!currentUser) return;
+    const rId = (roomId || 'MAFIA-MANOR').trim().toUpperCase();
+    const room = activeRooms.mafia.get(rId);
+    if (!room || room.phase !== 'night') return;
+
+    const actor = room.players.find(p => p.id === currentUser.id && p.isAlive);
+    if (!actor) return;
+
+    if (type === 'kill' && actor.role === 'mafia') {
+      room.nightActions.killTarget = targetId;
+      socket.emit('mafia_action_ack', { type: 'kill', success: true });
+    } else if (type === 'protect' && actor.role === 'doctor') {
+      room.nightActions.protectTarget = targetId;
+      socket.emit('mafia_action_ack', { type: 'protect', success: true });
+    } else if (type === 'inspect' && actor.role === 'detective') {
+      room.nightActions.inspectTarget = targetId;
+      const targetPlayer = room.players.find(p => p.id === targetId);
+      const isMafia = targetPlayer && targetPlayer.role === 'mafia';
+      socket.emit('mafia_inspect_result', {
+        targetName: targetPlayer ? targetPlayer.name : 'Unknown',
+        isMafia
+      });
+    }
+  });
+
+  function resolveMafiaNight(rId) {
+    const room = activeRooms.mafia.get(rId);
+    if (!room) return;
+
+    const killId = room.nightActions.killTarget;
+    const saveId = room.nightActions.protectTarget;
+    let victim = null;
+
+    if (killId && killId !== saveId) {
+      victim = room.players.find(p => p.id === killId);
+      if (victim) victim.isAlive = false;
+    }
+
+    if (victim) {
+      room.log.push(`☀️ Morning breaks. Tragically, ${victim.name} (${victim.avatar}) was eliminated during the night!`);
+    } else {
+      room.log.push(`☀️ Morning breaks. Miracle! Nobody died last night! The village doctor was on duty.`);
+    }
+
+    if (checkMafiaWinCondition(rId)) return;
+
+    room.phase = 'day';
+    room.timeLeft = 35;
+    room.votes = {};
+    emitMafiaState(rId);
+
+    room.timerInterval = setInterval(() => {
+      room.timeLeft--;
+      if (room.timeLeft <= 0) {
+        clearInterval(room.timerInterval);
+        resolveMafiaDayVotes(rId);
+      } else {
+        io.to('mafia_' + rId).emit('mafia_tick', { timeLeft: room.timeLeft });
+      }
+    }, 1000);
+  }
+
+  socket.on('mafia_vote', ({ roomId, targetId }) => {
+    if (!currentUser) return;
+    const rId = (roomId || 'MAFIA-MANOR').trim().toUpperCase();
+    const room = activeRooms.mafia.get(rId);
+    if (!room || room.phase !== 'day') return;
+
+    const voter = room.players.find(p => p.id === currentUser.id && p.isAlive);
+    if (!voter) return;
+
+    room.votes[voter.id] = targetId;
+    emitMafiaState(rId);
+  });
+
+  function resolveMafiaDayVotes(rId) {
+    const room = activeRooms.mafia.get(rId);
+    if (!room) return;
+
+    const voteCounts = {};
+    Object.values(room.votes).forEach(tId => {
+      if (tId) voteCounts[tId] = (voteCounts[tId] || 0) + 1;
+    });
+
+    let maxVotes = 0;
+    let exiledId = null;
+    for (const [tId, count] of Object.entries(voteCounts)) {
+      if (count > maxVotes) {
+        maxVotes = count;
+        exiledId = tId;
+      }
+    }
+
+    if (exiledId && maxVotes > 0) {
+      const exiledPlayer = room.players.find(p => p.id === exiledId);
+      if (exiledPlayer) {
+        exiledPlayer.isAlive = false;
+        room.log.push(`⚖️ The village voted to exile ${exiledPlayer.name}! They were revealed to be: ${exiledPlayer.role.toUpperCase()}!`);
+      }
+    } else {
+      room.log.push(`⚖️ The village could not reach a majority consensus. Nobody was exiled today.`);
+    }
+
+    if (checkMafiaWinCondition(rId)) return;
+
+    room.round++;
+    startMafiaNight(rId);
+  }
+
+  function checkMafiaWinCondition(rId) {
+    const room = activeRooms.mafia.get(rId);
+    if (!room) return false;
+
+    const living = room.players.filter(p => p.isAlive);
+    const livingMafia = living.filter(p => p.role === 'mafia');
+    const livingVillagers = living.filter(p => p.role !== 'mafia');
+
+    if (livingMafia.length === 0) {
+      room.phase = 'ended';
+      room.winner = 'villagers';
+      room.log.push(`🏆 VILLAGERS WIN! All mafia members have been brought to justice!`);
+      livingVillagers.forEach(v => awardXP(v.id, 50));
+      emitMafiaState(rId);
+      return true;
+    } else if (livingMafia.length >= livingVillagers.length) {
+      room.phase = 'ended';
+      room.winner = 'mafia';
+      room.log.push(`🩸 MAFIA WINS! The mafia has overtaken the village!`);
+      livingMafia.forEach(m => awardXP(m.id, 75));
+      emitMafiaState(rId);
+      return true;
+    }
+    return false;
+  }
+
+  socket.on('mafia_reset', ({ roomId }) => {
+    const rId = (roomId || 'MAFIA-MANOR').trim().toUpperCase();
+    const room = activeRooms.mafia.get(rId);
+    if (!room) return;
+
+    clearInterval(room.timerInterval);
+    room.phase = 'lobby';
+    room.round = 1;
+    room.winner = null;
+    room.log = [`Lobby refreshed. Gather your classmates and start!`];
+    room.players.forEach(p => { p.isAlive = true; p.role = 'villager'; });
+    emitMafiaState(rId);
   });
 
   socket.on('disconnect', () => {

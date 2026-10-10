@@ -385,21 +385,36 @@
             <p class="text-slate-400 text-sm mt-0.5">High-speed real-time gaming lounge. Challenge friends or battle the room!</p>
           </div>
           <!-- Game switch pills -->
-          <div class="flex items-center gap-2 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 self-start sm:self-auto overflow-x-auto shadow-inner">
-            <button onclick="selectGame('quiz')" id="game-pill-quiz" class="px-4 py-2 rounded-xl text-xs font-black transition bg-indigo-600 text-white shadow-md shadow-indigo-600/30 whitespace-nowrap">
+          <div class="flex items-center gap-2 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 self-start sm:self-auto overflow-x-auto max-w-full shadow-inner scrollbar-thin">
+            <button onclick="selectGame('quiz')" id="game-pill-quiz" class="px-3.5 py-2 rounded-xl text-xs font-black transition bg-indigo-600 text-white shadow-md shadow-indigo-600/30 whitespace-nowrap">
               🧠 Quiz Battle
             </button>
-            <button onclick="selectGame('ttt')" id="game-pill-ttt" class="px-4 py-2 rounded-xl text-xs font-black transition text-slate-400 hover:text-white whitespace-nowrap">
+            <button onclick="selectGame('ttt')" id="game-pill-ttt" class="px-3.5 py-2 rounded-xl text-xs font-black transition text-slate-400 hover:text-white whitespace-nowrap">
               ⚔️ Tic-Tac-Toe
             </button>
-            <button onclick="selectGame('c4')" id="game-pill-c4" class="px-4 py-2 rounded-xl text-xs font-black transition text-slate-400 hover:text-white whitespace-nowrap">
+            <button onclick="selectGame('c4')" id="game-pill-c4" class="px-3.5 py-2 rounded-xl text-xs font-black transition text-slate-400 hover:text-white whitespace-nowrap">
               🔴 Connect Four
             </button>
-            <button onclick="selectGame('rps')" id="game-pill-rps" class="px-4 py-2 rounded-xl text-xs font-black transition text-slate-400 hover:text-white whitespace-nowrap">
+            <button onclick="selectGame('rps')" id="game-pill-rps" class="px-3.5 py-2 rounded-xl text-xs font-black transition text-slate-400 hover:text-white whitespace-nowrap">
               ✊ Rock Paper Scissors
             </button>
-            <button onclick="selectGame('stumble')" id="game-pill-stumble" class="px-4 py-2 rounded-xl text-xs font-black transition text-slate-400 hover:text-white whitespace-nowrap">
+            <button onclick="selectGame('stumble')" id="game-pill-stumble" class="px-3.5 py-2 rounded-xl text-xs font-black transition text-slate-400 hover:text-white whitespace-nowrap">
               🏃 Stumble Dash
+            </button>
+            <button onclick="selectGame('chess')" id="game-pill-chess" class="px-3.5 py-2 rounded-xl text-xs font-black transition text-slate-400 hover:text-white whitespace-nowrap">
+              ♟️ Chess (Spectate!)
+            </button>
+            <button onclick="selectGame('ludo')" id="game-pill-ludo" class="px-3.5 py-2 rounded-xl text-xs font-black transition text-slate-400 hover:text-white whitespace-nowrap">
+              🎲 Ludo Royale
+            </button>
+            <button onclick="selectGame('snl')" id="game-pill-snl" class="px-3.5 py-2 rounded-xl text-xs font-black transition text-slate-400 hover:text-white whitespace-nowrap">
+              🐍 Snake & Ladder
+            </button>
+            <button onclick="selectGame('scribble')" id="game-pill-scribble" class="px-3.5 py-2 rounded-xl text-xs font-black transition text-slate-400 hover:text-white whitespace-nowrap">
+              🎨 Scribble
+            </button>
+            <button onclick="selectGame('mafia')" id="game-pill-mafia" class="px-3.5 py-2 rounded-xl text-xs font-black transition text-slate-400 hover:text-white whitespace-nowrap">
+              🕵️ Mafia
             </button>
           </div>
         </div>
@@ -776,6 +791,397 @@
               <span>JUMP / DIVE</span>
               <i class="fa-solid fa-arrow-up"></i>
             </button>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- GAME 6: GRANDMASTER CHESS (SPECTATOR MODE) -->
+        <!-- ============================================== -->
+        <div id="game-container-chess" class="hidden glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl max-w-4xl mx-auto">
+          <div class="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-800 mb-6">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-2xl border border-indigo-500/30 shadow-lg shadow-indigo-500/10">
+                ♟️
+              </div>
+              <div>
+                <h3 class="text-xl font-black text-white font-heading">Grandmaster Chess</h3>
+                <p class="text-xs text-slate-400">1-on-1 strategy with Live Spectator Arena & Cheer Reactions!</p>
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <input type="text" id="chess-room-input" value="GRANDMASTER-1" placeholder="Room code" 
+                class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono uppercase text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 w-36 shadow-inner">
+              <button onclick="joinChessRoom(false)" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-md shadow-indigo-600/30">
+                Join Match
+              </button>
+              <button onclick="joinChessAsSpectator()" class="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition shadow-md shadow-purple-600/30 flex items-center gap-1.5">
+                <i class="fa-solid fa-eye text-[11px]"></i> Watch
+              </button>
+            </div>
+          </div>
+
+          <!-- Status & Player Header -->
+          <div class="flex items-center justify-between bg-slate-900/80 p-4 rounded-2xl border border-slate-800 mb-4 shadow-inner">
+            <div class="text-left">
+              <div class="text-[10px] text-cyan-400 font-extrabold uppercase font-mono">White ⚪</div>
+              <div class="text-sm font-black text-white" id="chess-name-white">Waiting...</div>
+            </div>
+            <div class="text-center px-4 flex flex-col items-center gap-1.5">
+              <span id="chess-turn-badge" class="px-3.5 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                Waiting for match...
+              </span>
+              <span id="chess-role-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400">
+                Spectating
+              </span>
+            </div>
+            <div class="text-right">
+              <div class="text-[10px] text-rose-400 font-extrabold uppercase font-mono">Black ⚫</div>
+              <div class="text-sm font-black text-white" id="chess-name-black">Waiting...</div>
+            </div>
+          </div>
+
+          <!-- Live Spectator Lounge & Cheer Bar -->
+          <div class="p-3.5 bg-slate-900/60 rounded-2xl border border-slate-800 mb-6 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-purple-400 font-mono flex items-center gap-1.5">
+                <i class="fa-solid fa-eye"></i> <span id="chess-spectator-count">0</span> Spectators:
+              </span>
+              <div id="chess-spectators-list" class="flex flex-wrap gap-1.5">
+                <!-- Spectator chips -->
+              </div>
+            </div>
+            <!-- Cheer buttons -->
+            <div class="flex items-center gap-1.5">
+              <span class="text-slate-400 text-[11px] font-bold mr-1">Cheer:</span>
+              <button onclick="sendChessCheer('👏')" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm transition">👏</button>
+              <button onclick="sendChessCheer('🔥')" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm transition">🔥</button>
+              <button onclick="sendChessCheer('😮')" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm transition">😮</button>
+              <button onclick="sendChessCheer('♟️')" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm transition">♟️</button>
+              <button onclick="sendChessCheer('🏆')" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm transition">🏆</button>
+              <button onclick="flipChessBoard()" class="ml-2 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition flex items-center gap-1" title="Flip Board">
+                <i class="fa-solid fa-rotate"></i> Flip
+              </button>
+            </div>
+          </div>
+
+          <!-- Board and Move History Grid -->
+          <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+            <div class="lg:col-span-3 flex justify-center relative">
+              <div id="chess-board-grid" class="chess-board relative"></div>
+            </div>
+
+            <!-- Move History Sidebar -->
+            <div class="glass-panel p-4 rounded-2xl border border-slate-800 h-full flex flex-col justify-between">
+              <div>
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
+                  <span>Move Notation</span>
+                  <i class="fa-solid fa-list-ol text-slate-500"></i>
+                </h4>
+                <div id="chess-move-history" class="space-y-1 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
+                  <div class="text-xs text-slate-500 italic">No moves yet</div>
+                </div>
+              </div>
+              <div class="pt-4 mt-4 border-t border-slate-800 text-center">
+                <button id="chess-rematch-btn" onclick="requestChessRematch()" class="hidden w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow-md shadow-emerald-600/30">
+                  🔄 Request Rematch
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- GAME 7: LUDO ROYALE (2-4 PLAYERS) -->
+        <!-- ============================================== -->
+        <div id="game-container-ludo" class="hidden glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl max-w-4xl mx-auto">
+          <div class="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-800 mb-6">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-2xl border border-amber-500/30 shadow-lg shadow-amber-500/10">
+                🎲
+              </div>
+              <div>
+                <h3 class="text-xl font-black text-white font-heading">Ludo Royale</h3>
+                <p class="text-xs text-slate-400">Classic 4-Player board battle. Roll 6 to deploy and race home!</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="text" id="ludo-room-input" value="LUDO-CLUB" placeholder="Room code" 
+                class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono uppercase text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 w-36 shadow-inner">
+              <button onclick="joinLudoRoom()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-md shadow-indigo-600/30">
+                Join Match
+              </button>
+            </div>
+          </div>
+
+          <!-- Ludo Lobby View -->
+          <div id="ludo-lobby-view" class="py-10 text-center max-w-lg mx-auto">
+            <div class="text-6xl mb-4">🎲</div>
+            <h4 class="text-2xl font-black text-white mb-2 font-heading">Ludo Waiting Room</h4>
+            <p class="text-xs text-slate-400 mb-6">Assemble 2 to 4 classmates to begin.</p>
+            <div id="ludo-lobby-players" class="grid grid-cols-2 gap-3 mb-6"></div>
+            <button id="ludo-start-btn" onclick="startLudoMatch()" class="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-emerald-500 text-white font-black text-sm shadow-xl transition transform hover:scale-105 active:scale-95">
+              🚀 Start Ludo Match!
+            </button>
+          </div>
+
+          <!-- Ludo Active Game View -->
+          <div id="ludo-game-view" class="hidden">
+            <!-- Turn & Dice Header -->
+            <div class="flex items-center justify-between bg-slate-900/80 p-4 rounded-2xl border border-slate-800 mb-6 shadow-inner">
+              <div>
+                <span id="ludo-turn-badge" class="px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-800 text-slate-200">
+                  Player Turn
+                </span>
+              </div>
+              <div class="flex items-center gap-3">
+                <div id="ludo-dice-box" onclick="rollLudoDice()" class="dice-cube" title="Click to Roll!">
+                  🎲
+                </div>
+                <button onclick="rollLudoDice()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold text-xs shadow-md shadow-amber-500/30 transition active:scale-95">
+                  Roll Dice
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+              <div class="lg:col-span-3 flex justify-center">
+                <div class="ludo-board-wrapper">
+                  <div id="ludo-board-grid" class="ludo-grid"></div>
+                </div>
+              </div>
+
+              <!-- Match Log Sidebar -->
+              <div class="glass-panel p-4 rounded-2xl border border-slate-800 h-full flex flex-col justify-between">
+                <div>
+                  <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
+                    <span>Match Chronicle</span>
+                    <i class="fa-solid fa-scroll text-slate-500"></i>
+                  </h4>
+                  <div id="ludo-history-log" class="space-y-1.5 max-h-72 overflow-y-auto pr-1 scrollbar-thin"></div>
+                </div>
+                <div class="pt-4 mt-4 border-t border-slate-800 text-center">
+                  <button onclick="resetLudoMatch()" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition">
+                    🔄 Reset Table
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- GAME 8: SNAKE AND LADDER -->
+        <!-- ============================================== -->
+        <div id="game-container-snl" class="hidden glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl max-w-4xl mx-auto">
+          <div class="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-800 mb-6">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-2xl border border-emerald-500/30 shadow-lg shadow-emerald-500/10">
+                🐍
+              </div>
+              <div>
+                <h3 class="text-xl font-black text-white font-heading">Snake & Ladder Mania</h3>
+                <p class="text-xs text-slate-400">Climb 🪜 ladders to leap ahead, avoid biting 🐍 snakes! First to 100 wins.</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="text" id="snl-room-input" value="SNAKE-ARENA" placeholder="Room code" 
+                class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono uppercase text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-36 shadow-inner">
+              <button onclick="joinSnlRoom()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-md shadow-emerald-600/30">
+                Join Game
+              </button>
+            </div>
+          </div>
+
+          <!-- Controls Header -->
+          <div class="flex items-center justify-between bg-slate-900/80 p-4 rounded-2xl border border-slate-800 mb-6 shadow-inner">
+            <span id="snl-turn-badge" class="px-4 py-1.5 rounded-full text-xs font-bold bg-slate-800 text-slate-200">
+              Roll the Die to Begin!
+            </span>
+            <div class="flex items-center gap-3">
+              <div id="snl-dice-box" onclick="rollSnlDice()" class="dice-cube" title="Click to Roll!">
+                🎲
+              </div>
+              <button onclick="rollSnlDice()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md shadow-emerald-600/30 transition active:scale-95">
+                Roll Die
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+            <div class="lg:col-span-3 flex justify-center">
+              <div id="snl-board-grid" class="snl-board"></div>
+            </div>
+
+            <!-- Standings & Chronicle Sidebar -->
+            <div class="glass-panel p-4 rounded-2xl border border-slate-800 h-full flex flex-col justify-between space-y-4">
+              <div>
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Live Standings</h4>
+                <div id="snl-standings-list" class="space-y-1.5 mb-4"></div>
+
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Live Board Feed</h4>
+                <div id="snl-event-log" class="space-y-1 max-h-48 overflow-y-auto pr-1 scrollbar-thin"></div>
+              </div>
+
+              <div class="pt-3 border-t border-slate-800 text-center">
+                <button onclick="resetSnlGame()" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition">
+                  🔄 Restart Game
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- GAME 9: SCRIBBLE (SKRIBBL DRAW & GUESS) -->
+        <!-- ============================================== -->
+        <div id="game-container-scribble" class="hidden glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl max-w-5xl mx-auto">
+          <div class="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-800 mb-6">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-2xl bg-pink-500/20 text-pink-400 flex items-center justify-center text-2xl border border-pink-500/30 shadow-lg shadow-pink-500/10">
+                🎨
+              </div>
+              <div>
+                <h3 class="text-xl font-black text-white font-heading">Scribble: Draw & Guess</h3>
+                <p class="text-xs text-slate-400">One draws live on canvas, everyone guesses the secret word!</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="text" id="scribble-room-input" value="SCRIBBLE-LOUNGE" placeholder="Room code" 
+                class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono uppercase text-white focus:outline-none focus:ring-2 focus:ring-pink-500 w-36 shadow-inner">
+              <button onclick="joinScribbleRoom()" class="px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold transition shadow-md shadow-pink-600/30">
+                Join Lounge
+              </button>
+              <button id="scribble-start-btn" onclick="startScribbleGame()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-bold shadow-md transition">
+                🚀 Start
+              </button>
+            </div>
+          </div>
+
+          <!-- Game Status Bar -->
+          <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900/80 p-4 rounded-2xl border border-slate-800 mb-4 shadow-inner">
+            <div id="scribble-round-badge" class="text-xs font-mono text-pink-400 font-bold bg-pink-950/40 px-3 py-1 rounded-xl border border-pink-800/40">
+              Round 1/3
+            </div>
+            <div id="scribble-word-display" class="text-center font-heading">
+              Waiting for game to start...
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-slate-400">Time:</span>
+              <span id="scribble-timer" class="font-mono text-xl font-black text-amber-400">60s</span>
+            </div>
+          </div>
+
+          <!-- Canvas + Controls + Chat Grid -->
+          <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
+            <div class="lg:col-span-3 flex flex-col items-center">
+              <div class="scribble-canvas-box w-full overflow-hidden border border-slate-700/80 mb-3">
+                <canvas id="scribble-canvas" class="w-full block"></canvas>
+              </div>
+
+              <!-- Drawing Tools Toolbar -->
+              <div id="scribble-toolbar" class="w-full bg-slate-900/90 p-3 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-3 opacity-30 pointer-events-none transition">
+                <!-- Color dots -->
+                <div class="flex items-center gap-2">
+                  <div onclick="setScribbleColor('#000000', this)" class="scribble-color-dot active" style="background:#000000" title="Black"></div>
+                  <div onclick="setScribbleColor('#ef4444', this)" class="scribble-color-dot" style="background:#ef4444" title="Red"></div>
+                  <div onclick="setScribbleColor('#3b82f6', this)" class="scribble-color-dot" style="background:#3b82f6" title="Blue"></div>
+                  <div onclick="setScribbleColor('#10b981', this)" class="scribble-color-dot" style="background:#10b981" title="Green"></div>
+                  <div onclick="setScribbleColor('#f59e0b', this)" class="scribble-color-dot" style="background:#f59e0b" title="Yellow"></div>
+                  <div onclick="setScribbleColor('#ec4899', this)" class="scribble-color-dot" style="background:#ec4899" title="Pink"></div>
+                  <div onclick="setScribbleColor('#8b5cf6', this)" class="scribble-color-dot" style="background:#8b5cf6" title="Purple"></div>
+                  <div onclick="setScribbleColor('#ffffff', this)" class="scribble-color-dot" style="background:#ffffff" title="Eraser"></div>
+                </div>
+
+                <!-- Sizes & Clear -->
+                <div class="flex items-center gap-2">
+                  <button onclick="setScribbleSize(3)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300">Thin</button>
+                  <button onclick="setScribbleSize(7)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300">Med</button>
+                  <button onclick="setScribbleSize(15)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300">Thick</button>
+                  <button onclick="clearScribbleCanvas()" class="px-3 py-1 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 text-rose-300 border border-rose-500/40 text-xs font-bold ml-2">Clear</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Guess Chat & Scoreboard Sidebar -->
+            <div class="glass-panel p-4 rounded-2xl border border-slate-800 h-full flex flex-col justify-between space-y-3">
+              <div>
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Scoreboard</h4>
+                <div id="scribble-scoreboard" class="space-y-1.5 mb-4 max-h-36 overflow-y-auto"></div>
+
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Guesses & Chat</h4>
+                <div id="scribble-chat-log" class="space-y-1 h-44 overflow-y-auto pr-1 scrollbar-thin bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/80 mb-3"></div>
+              </div>
+
+              <!-- Guess form -->
+              <form onsubmit="submitScribbleGuess(event)" class="flex items-center gap-2">
+                <input type="text" id="scribble-guess-input" placeholder="Type your guess..." 
+                  class="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:ring-2 focus:ring-pink-500 shadow-inner">
+                <button type="submit" class="px-3 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold shadow-md shadow-pink-600/30 transition">
+                  Guess
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- GAME 10: MAFIA (SOCIAL DEDUCTION) -->
+        <!-- ============================================== -->
+        <div id="game-container-mafia" class="hidden glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl max-w-4xl mx-auto transition-all duration-700">
+          <div class="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-800 mb-6">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-2xl border border-purple-500/30 shadow-lg shadow-purple-500/10">
+                🕵️
+              </div>
+              <div>
+                <h3 class="text-xl font-black text-white font-heading">Mafia: Social Deduction</h3>
+                <p class="text-xs text-slate-400">Night strikes in silence, day erupts in accusation. Find the Impostor!</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="text" id="mafia-room-input" value="MAFIA-MANOR" placeholder="Room code" 
+                class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono uppercase text-white focus:outline-none focus:ring-2 focus:ring-purple-500 w-36 shadow-inner">
+              <button onclick="joinMafiaRoom()" class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition shadow-md shadow-purple-600/30">
+                Join Village
+              </button>
+              <button id="mafia-start-btn" onclick="startMafiaGame()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-purple-600 text-white text-xs font-bold shadow-md transition">
+                🚀 Start Game
+              </button>
+            </div>
+          </div>
+
+          <!-- Phase Badge Header -->
+          <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900/80 p-4 rounded-2xl border border-slate-800 mb-6 shadow-inner">
+            <span id="mafia-phase-badge" class="px-4 py-1.5 rounded-full text-xs font-bold bg-slate-800 text-slate-200">
+              Gathering Villagers in Town Square
+            </span>
+            <div id="mafia-my-role-card" class="hidden p-3 bg-slate-800/80 rounded-xl border border-slate-700"></div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            <!-- Living Villagers Grid -->
+            <div class="lg:col-span-2">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
+                <span>Town Residents</span>
+                <span class="text-[10px] text-slate-500 font-mono">Select target during active phase</span>
+              </h4>
+              <div id="mafia-players-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+            </div>
+
+            <!-- Town Chronicle Story Feed -->
+            <div class="glass-panel p-4 rounded-2xl border border-slate-800 h-full flex flex-col justify-between space-y-3">
+              <div>
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+                  <i class="fa-solid fa-book-skull text-purple-400"></i> Town Chronicle
+                </h4>
+                <div id="mafia-story-log" class="space-y-1.5 max-h-72 overflow-y-auto pr-1 scrollbar-thin"></div>
+              </div>
+              <div class="pt-3 border-t border-slate-800 text-center">
+                <button id="mafia-reset-btn" onclick="resetMafiaGame()" class="hidden w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition">
+                  🔄 Start Next Round
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1183,5 +1589,15 @@
   <script src="/js/app.js"></script>
   <!-- Stumble Dash Game Engine -->
   <script src="/js/stumble.js"></script>
+  <!-- Chess with Spectator Engine -->
+  <script src="/js/chess-game.js"></script>
+  <!-- Ludo Royale Engine -->
+  <script src="/js/ludo-game.js"></script>
+  <!-- Snake and Ladder Engine -->
+  <script src="/js/snl-game.js"></script>
+  <!-- Scribble Engine -->
+  <script src="/js/scribble-game.js"></script>
+  <!-- Mafia Engine -->
+  <script src="/js/mafia-game.js"></script>
 </body>
 </html>
