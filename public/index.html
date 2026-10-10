@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClassVerse — Class Hub & Multiplayer Games</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Socket.io client -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Custom styles -->
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+  <!-- ========================================== -->
+  <!-- 1. LOGIN SCREEN -->
+  <!-- ========================================== -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-md p-8 rounded-2xl shadow-2xl relative overflow-hidden border border-slate-800">
+      <div class="absolute -top-12 -right-12 w-40 h-40 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-12 -left-12 w-40 h-40 bg-pink-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="text-center mb-8 relative">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600/30 text-indigo-400 text-3xl mb-3 border border-indigo-500/30 shadow-inner">
+          🚀
+        </div>
+        <h1 class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-400 via-purple-300 to-pink-400 bg-clip-text text-transparent">
+          ClassVerse
+        </h1>
+        <p class="text-slate-400 text-sm mt-1">Class Social Hub & Multiplayer Arena</p>
+      </div>
+
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Student Login ID</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500">
+              <i class="fa-solid fa-id-card"></i>
+            </span>
+            <input type="text" id="login-student-id" required placeholder="e.g. STD-01 or ADMIN-01" 
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono tracking-wide uppercase transition-all">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Password</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500">
+              <i class="fa-solid fa-lock"></i>
+            </span>
+            <input type="password" id="login-password" required placeholder="••••••••" 
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+          </div>
+        </div>
+
+        <div id="login-error" class="hidden text-xs text-red-400 bg-red-950/40 border border-red-800/50 p-2.5 rounded-lg flex items-center gap-2">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          <span id="login-error-text">Invalid login credentials</span>
+        </div>
+
+        <button type="submit" id="login-submit-btn" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold shadow-lg shadow-indigo-600/30 transition-all duration-200 transform active:scale-[0.98] flex items-center justify-center gap-2">
+          <span>Enter ClassVerse</span>
+          <i class="fa-solid fa-arrow-right text-xs"></i>
+        </button>
+      </form>
+
+      <!-- Quick Classmate Demo Accounts -->
+      <div class="mt-6 pt-5 border-t border-slate-800/80">
+        <p class="text-xs text-slate-400 font-medium mb-2.5 flex items-center justify-between">
+          <span>⚡ Quick Test Logins:</span>
+          <span class="text-[11px] text-slate-500 font-mono">Password: pass123</span>
+        </p>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <button type="button" onclick="quickFill('STD-01', 'pass123')" class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-300 text-left flex items-center gap-2 transition">
+            <span>🦊</span> <span class="font-semibold">Alex</span> <span class="text-[10px] text-indigo-400 font-mono ml-auto">STD-01</span>
+          </button>
+          <button type="button" onclick="quickFill('STD-02', 'pass123')" class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-300 text-left flex items-center gap-2 transition">
+            <span>🐼</span> <span class="font-semibold">Samira</span> <span class="text-[10px] text-indigo-400 font-mono ml-auto">STD-02</span>
+          </button>
+          <button type="button" onclick="quickFill('STD-05', 'pass123')" class="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-300 text-left flex items-center gap-2 transition">
+            <span>🚀</span> <span class="font-semibold">Aadhavan</span> <span class="text-[10px] text-indigo-400 font-mono ml-auto">STD-05</span>
+          </button>
+          <button type="button" onclick="quickFill('ADMIN-01', 'admin123')" class="px-2.5 py-1.5 rounded-lg bg-indigo-950/60 hover:bg-indigo-900/60 border border-indigo-700/60 text-indigo-200 text-left flex items-center gap-2 transition">
+            <span>👑</span> <span class="font-semibold">Admin</span> <span class="text-[10px] text-purple-400 font-mono ml-auto">ADMIN-01</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 2. MAIN APP CONTAINER (HIDDEN UNTIL AUTH) -->
+  <!-- ========================================== -->
+  <div id="main-app" class="hidden flex-1 flex flex-col h-screen overflow-hidden">
+    
+    <!-- Top Navigation Header -->
+    <header class="glass-panel border-b border-slate-800/90 z-20 shrink-0">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        
+        <!-- Brand & Online Pill -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-pink-500 flex items-center justify-center text-xl shadow-lg shadow-indigo-500/20">
+            🚀
+          </div>
+          <div>
+            <h1 class="text-lg font-black tracking-tight text-white flex items-center gap-2 leading-none">
+              ClassVerse
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">v1.1</span>
+            </h1>
+          </div>
+
+          <!-- PROMINENT WHO IS ONLINE BUTTON -->
+          <button onclick="openOnlineLoungeModal()" class="ml-2 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition transform hover:scale-105 active:scale-95 shadow-sm" title="Click to view all online classmates and challenge them!">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span id="header-online-count">1 Classmate Online</span>
+            <i class="fa-solid fa-users text-[10px]"></i>
+          </button>
+        </div>
+
+        <!-- Center Nav Tabs -->
+        <nav class="hidden lg:flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800">
+          <button onclick="switchTab('chat')" id="tab-btn-chat" class="tab-btn px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all bg-indigo-600 text-white shadow-sm">
+            <i class="fa-solid fa-comments text-xs"></i>
+            <span>Class Chat</span>
+          </button>
+          <button onclick="switchTab('games')" id="tab-btn-games" class="tab-btn px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
+            <i class="fa-solid fa-gamepad text-xs"></i>
+            <span>Game Lounge</span>
+          </button>
+          <button onclick="switchTab('board')" id="tab-btn-board" class="tab-btn px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
+            <i class="fa-solid fa-bullhorn text-xs"></i>
+            <span>Notices & Polls</span>
+          </button>
+          <button onclick="switchTab('leaderboard')" id="tab-btn-leaderboard" class="tab-btn px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
+            <i class="fa-solid fa-trophy text-xs"></i>
+            <span>Leaderboard</span>
+          </button>
+          <button onclick="switchTab('admin')" id="tab-btn-admin" class="tab-btn hidden px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
+            <i class="fa-solid fa-user-shield text-xs"></i>
+            <span>Admin</span>
+          </button>
+        </nav>
+
+        <!-- User Profile Pill & Actions -->
+        <div class="flex items-center gap-3">
+          <!-- Student Card -->
+          <div class="flex items-center gap-2.5 bg-slate-900/80 hover:bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-800 cursor-pointer transition" onclick="openAvatarModal()" title="Click to customize avatar and status message">
+            <div class="text-2xl" id="nav-user-avatar">🎓</div>
+            <div class="text-left hidden sm:block">
+              <div class="text-xs font-bold text-white flex items-center gap-1.5 leading-none">
+                <span id="nav-user-name">Student</span>
+                <span id="nav-user-badge" class="text-[9px] uppercase font-mono px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300">STD-01</span>
+              </div>
+              <div class="text-[11px] text-amber-400 font-semibold font-mono mt-0.5 leading-none flex items-center gap-1">
+                <span id="nav-user-xp">100</span> XP
+                <span class="text-slate-500 font-normal">|</span>
+                <span id="nav-user-status-peek" class="text-[10px] text-slate-400 font-normal truncate max-w-[90px]">Ready to play</span>
+              </div>
+            </div>
+            <i class="fa-solid fa-angle-down text-slate-500 text-xs ml-1"></i>
+          </div>
+
+          <!-- Logout Button -->
+          <button onclick="logout()" class="w-9 h-9 rounded-xl bg-slate-900/80 hover:bg-red-950/60 hover:text-red-400 border border-slate-800 hover:border-red-800/50 text-slate-400 flex items-center justify-center transition" title="Logout">
+            <i class="fa-solid fa-right-from-bracket text-sm"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Tab Bar -->
+      <div class="flex lg:hidden border-t border-slate-800/80 px-2 py-1 justify-around bg-slate-900/90 text-[11px] overflow-x-auto">
+        <button onclick="switchTab('chat')" id="mobile-tab-btn-chat" class="px-2.5 py-1.5 font-semibold text-indigo-400 whitespace-nowrap">
+          <i class="fa-solid fa-comments mr-1"></i> Chat
+        </button>
+        <button onclick="switchTab('games')" id="mobile-tab-btn-games" class="px-2.5 py-1.5 font-semibold text-slate-400 whitespace-nowrap">
+          <i class="fa-solid fa-gamepad mr-1"></i> Games
+        </button>
+        <button onclick="switchTab('board')" id="mobile-tab-btn-board" class="px-2.5 py-1.5 font-semibold text-slate-400 whitespace-nowrap">
+          <i class="fa-solid fa-bullhorn mr-1"></i> Notices
+        </button>
+        <button onclick="switchTab('leaderboard')" id="mobile-tab-btn-leaderboard" class="px-2.5 py-1.5 font-semibold text-slate-400 whitespace-nowrap">
+          <i class="fa-solid fa-trophy mr-1"></i> Ranks
+        </button>
+        <button onclick="switchTab('admin')" id="mobile-tab-btn-admin" class="hidden px-2.5 py-1.5 font-semibold text-slate-400 whitespace-nowrap">
+          <i class="fa-solid fa-user-shield mr-1"></i> Admin
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-hidden relative">
+
+      <!-- ========================================== -->
+      <!-- TAB 1: CLASS CHAT -->
+      <!-- ========================================== -->
+      <div id="tab-content-chat" class="h-full flex flex-col md:flex-row">
+        <!-- Messages Area -->
+        <div class="flex-1 flex flex-col h-full overflow-hidden bg-slate-950/60">
+          
+          <!-- Chat Header Bar -->
+          <div class="px-6 py-3 border-b border-slate-800/80 flex items-center justify-between bg-slate-900/40">
+            <div class="flex items-center gap-2">
+              <span class="text-xl">💬</span>
+              <div>
+                <h2 class="text-sm font-bold text-white leading-none"># general-class-chat</h2>
+                <p class="text-[11px] text-slate-400 mt-0.5">Real-time chat with everyone in class</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <button onclick="openOnlineLoungeModal()" class="text-xs text-emerald-400 font-bold bg-emerald-950/40 border border-emerald-800/50 px-2.5 py-1 rounded-lg flex items-center gap-1.5 hover:bg-emerald-900/50 transition">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span id="chat-online-count">1</span> online — View Lounge
+              </button>
+            </div>
+          </div>
+
+          <!-- Message stream -->
+          <div id="chat-messages" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+            <!-- Dynamically populated -->
+          </div>
+
+          <!-- Typing indicator -->
+          <div id="chat-typing-bar" class="px-6 py-1 text-xs text-indigo-400 italic font-medium h-6 flex items-center gap-1.5 opacity-0 transition-opacity">
+            <i class="fa-solid fa-keyboard text-[10px]"></i>
+            <span id="chat-typing-text">Someone is typing...</span>
+          </div>
+
+          <!-- Chat Input Bar -->
+          <div class="p-4 border-t border-slate-800/80 bg-slate-900/60">
+            <!-- Quick Emoji reactions bar -->
+            <div class="flex items-center gap-2 mb-2 px-1">
+              <span class="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Quick:</span>
+              <button onclick="insertEmoji('🔥')" class="text-sm hover:scale-125 transition">🔥</button>
+              <button onclick="insertEmoji('😂')" class="text-sm hover:scale-125 transition">😂</button>
+              <button onclick="insertEmoji('❤️')" class="text-sm hover:scale-125 transition">❤️</button>
+              <button onclick="insertEmoji('👏')" class="text-sm hover:scale-125 transition">👏</button>
+              <button onclick="insertEmoji('🚀')" class="text-sm hover:scale-125 transition">🚀</button>
+              <button onclick="insertEmoji('💯')" class="text-sm hover:scale-125 transition">💯</button>
+            </div>
+            
+            <form id="chat-form" class="flex items-center gap-2">
+              <div class="relative flex-1">
+                <input type="text" id="chat-input" placeholder="Type a message to your classmates..." maxlength="400" autocomplete="off"
+                  class="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition text-sm">
+              </div>
+              <button type="submit" class="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition shadow-md shadow-indigo-600/30 flex items-center gap-2">
+                <span>Send</span>
+                <i class="fa-solid fa-paper-plane text-xs"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Online Classmates Sidebar -->
+        <div class="w-full md:w-80 border-t md:border-t-0 md:border-l border-slate-800/80 bg-slate-900/50 flex flex-col h-56 md:h-full shrink-0">
+          <div class="p-3.5 border-b border-slate-800/80 flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+              <i class="fa-solid fa-users text-emerald-400"></i>
+              Classmates Online
+            </span>
+            <button onclick="openOnlineLoungeModal()" class="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold underline">
+              Expand View
+            </button>
+          </div>
+          <div id="online-users-list" class="flex-1 overflow-y-auto p-3 space-y-2">
+            <!-- Dynamic list of online classmates -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 2: MULTIPLAYER GAME LOUNGE -->
+      <!-- ========================================== -->
+      <div id="tab-content-games" class="hidden h-full overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+        
+        <!-- Game Selector Header -->
+        <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-black text-white flex items-center gap-2">
+              🎮 Multiplayer Arena
+            </h2>
+            <p class="text-slate-400 text-sm mt-0.5">Play real-time games with your classmates across browser tabs or phones!</p>
+          </div>
+          <!-- Game switch pills -->
+          <div class="flex items-center gap-1.5 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800 self-start sm:self-auto overflow-x-auto">
+            <button onclick="selectGame('quiz')" id="game-pill-quiz" class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-indigo-600 text-white shadow whitespace-nowrap">
+              🧠 Quiz Battle
+            </button>
+            <button onclick="selectGame('ttt')" id="game-pill-ttt" class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white whitespace-nowrap">
+              ⚔️ Tic-Tac-Toe
+            </button>
+            <button onclick="selectGame('c4')" id="game-pill-c4" class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white whitespace-nowrap">
+              🔴 Connect Four
+            </button>
+            <button onclick="selectGame('rps')" id="game-pill-rps" class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white whitespace-nowrap">
+              ✊ Rock Paper Scissors
+            </button>
+          </div>
+        </div>
+
+        <!-- ========================== -->
+        <!-- GAME 1: CLASS QUIZ BATTLE -->
+        <!-- ========================== -->
+        <div id="game-container-quiz" class="glass-panel rounded-2xl p-6 sm:p-8 border border-slate-800/90 shadow-xl">
+          <!-- Room bar -->
+          <div class="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-800/80">
+            <div class="flex items-center gap-3">
+              <span class="text-3xl">🏆</span>
+              <div>
+                <h3 class="text-lg font-bold text-white">Live Classroom Quiz Show</h3>
+                <p class="text-xs text-slate-400">Answer fast for maximum speed points! 5 questions per battle.</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="text" id="quiz-room-input" value="CLASS-ROOM" placeholder="Room code" 
+                class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono uppercase text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 w-36">
+              <button onclick="joinQuizRoom()" class="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition">
+                Join Room
+              </button>
+            </div>
+          </div>
+
+          <!-- Quiz View: Lobby -->
+          <div id="quiz-view-lobby" class="py-12 text-center max-w-lg mx-auto">
+            <div class="text-5xl mb-4 animate-bounce">🎓</div>
+            <h4 class="text-xl font-bold text-white mb-2">Quiz Battle Lobby</h4>
+            <p class="text-sm text-slate-400 mb-6">Waiting for classmates to join room <span id="quiz-lobby-room-name" class="font-mono text-indigo-400 font-bold">CLASS-ROOM</span></p>
+            
+            <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 mb-6">
+              <h5 class="text-xs font-semibold uppercase text-slate-400 mb-3">Classmates in Lobby (<span id="quiz-player-count">0</span>):</h5>
+              <div id="quiz-players-chips" class="flex flex-wrap gap-2 justify-center">
+                <!-- Chips -->
+              </div>
+            </div>
+
+            <button onclick="startQuizBattle()" id="quiz-start-btn" class="px-8 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 transition transform hover:scale-105 active:scale-95">
+              🚀 Start Quiz Battle!
+            </button>
+          </div>
+
+          <!-- Quiz View: Active Question -->
+          <div id="quiz-view-question" class="hidden py-6 max-w-2xl mx-auto">
+            <div class="flex items-center justify-between mb-4">
+              <div class="text-xs font-bold text-indigo-400 uppercase tracking-wider">
+                Question <span id="quiz-current-q-num">1</span> of <span id="quiz-total-q-num">5</span>
+                <span id="quiz-q-category" class="ml-2 px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[10px]">Science</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-semibold text-slate-400">Time:</span>
+                <span id="quiz-timer-display" class="font-mono text-lg font-black text-amber-400">10s</span>
+              </div>
+            </div>
+
+            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-6">
+              <div id="quiz-timer-bar" class="bg-gradient-to-r from-amber-500 to-rose-500 h-full w-full transition-all duration-1000"></div>
+            </div>
+
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 sm:p-8 text-center mb-6 shadow-inner">
+              <h4 id="quiz-question-text" class="text-xl sm:text-2xl font-bold text-white leading-relaxed">
+                Loading question...
+              </h4>
+            </div>
+
+            <div id="quiz-options-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+              <!-- Dynamically populated buttons -->
+            </div>
+
+            <div id="quiz-round-alert" class="hidden p-4 rounded-xl text-center text-sm font-bold border transition">
+            </div>
+          </div>
+
+          <!-- Quiz View: Finished / Podium -->
+          <div id="quiz-view-finished" class="hidden py-8 max-w-lg mx-auto text-center">
+            <div class="text-5xl mb-3">🎉 👑 🏆</div>
+            <h4 class="text-2xl font-black text-white mb-2">Quiz Finished!</h4>
+            <p class="text-sm text-slate-400 mb-6">Awesome game! Here are the final classroom scores:</p>
+
+            <div id="quiz-final-leaderboard" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-2 mb-6">
+              <!-- Ranked list -->
+            </div>
+
+            <button onclick="resetQuizLobby()" class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition">
+              Play Again / Return to Lobby
+            </button>
+          </div>
+        </div>
+
+        <!-- ========================== -->
+        <!-- GAME 2: TIC-TAC-TOE -->
+        <!-- ========================== -->
+        <div id="game-container-ttt" class="hidden glass-panel rounded-2xl p-6 sm:p-8 border border-slate-800/90 shadow-xl max-w-2xl mx-auto">
+          <div class="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-800/80 mb-6">
+            <div class="flex items-center gap-3">
+              <span class="text-3xl">⚔️</span>
+              <div>
+                <h3 class="text-lg font-bold text-white">Multiplayer Tic-Tac-Toe</h3>
+                <p class="text-xs text-slate-400">1-on-1 duel. Get 3 in a row to win!</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="text" id="ttt-room-input" value="TTT-1" placeholder="Room code" 
+                class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono uppercase text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 w-32">
+              <button onclick="joinTTTRoom()" class="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition">
+                Join Match
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between bg-slate-900/60 p-4 rounded-xl border border-slate-800 mb-6">
+            <div id="ttt-player-x" class="text-left">
+              <div class="text-xs text-indigo-400 font-bold">Player X</div>
+              <div class="text-sm font-extrabold text-white" id="ttt-name-x">Waiting...</div>
+            </div>
+            <div class="text-center px-4">
+              <span id="ttt-status-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                Waiting for opponent...
+              </span>
+            </div>
+            <div id="ttt-player-o" class="text-right">
+              <div class="text-xs text-pink-400 font-bold">Player O</div>
+              <div class="text-sm font-extrabold text-white" id="ttt-name-o">Waiting...</div>
+            </div>
+          </div>
+
+          <div class="ttt-grid mb-6">
+            <div class="ttt-cell" data-idx="0" onclick="makeTTTMove(0)"></div>
+            <div class="ttt-cell" data-idx="1" onclick="makeTTTMove(1)"></div>
+            <div class="ttt-cell" data-idx="2" onclick="makeTTTMove(2)"></div>
+            <div class="ttt-cell" data-idx="3" onclick="makeTTTMove(3)"></div>
+            <div class="ttt-cell" data-idx="4" onclick="makeTTTMove(4)"></div>
+            <div class="ttt-cell" data-idx="5" onclick="makeTTTMove(5)"></div>
+            <div class="ttt-cell" data-idx="6" onclick="makeTTTMove(6)"></div>
+            <div class="ttt-cell" data-idx="7" onclick="makeTTTMove(7)"></div>
+            <div class="ttt-cell" data-idx="8" onclick="makeTTTMove(8)"></div>
+          </div>
+
+          <div class="text-center">
+            <button id="ttt-rematch-btn" onclick="requestTTTRematch()" class="hidden px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition">
+              🔄 Request Rematch
+            </button>
+          </div>
+        </div>
+
+        <!-- ========================== -->
+        <!-- GAME 3: CONNECT FOUR -->
+        <!-- ========================== -->
+        <div id="game-container-c4" class="hidden glass-panel rounded-2xl p-6 sm:p-8 border border-slate-800/90 shadow-xl max-w-3xl mx-auto">
+          <div class="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-800/80 mb-6">
+            <div class="flex items-center gap-3">
+              <span class="text-3xl">🔴</span>
+              <div>
+                <h3 class="text-lg font-bold text-white">Multiplayer Connect Four</h3>
+                <p class="text-xs text-slate-400">Drop chips to connect 4 horizontally, vertically, or diagonally!</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="text" id="c4-room-input" value="C4-ROOM" placeholder="Room code" 
+                class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono uppercase text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 w-32">
+              <button onclick="joinC4Room()" class="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition">
+                Join Table
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between bg-slate-900/60 p-4 rounded-xl border border-slate-800 mb-6">
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 rounded-full bg-red-500 shadow-md shadow-red-500/50"></div>
+              <div>
+                <div class="text-xs text-red-400 font-bold">Player 1 (Red)</div>
+                <div class="text-sm font-extrabold text-white" id="c4-name-1">Waiting...</div>
+              </div>
+            </div>
+            <div class="text-center px-4">
+              <span id="c4-status-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                Waiting for opponent...
+              </span>
+            </div>
+            <div class="flex items-center gap-2 text-right">
+              <div>
+                <div class="text-xs text-yellow-400 font-bold">Player 2 (Yellow)</div>
+                <div class="text-sm font-extrabold text-white" id="c4-name-2">Waiting...</div>
+              </div>
+              <div class="w-4 h-4 rounded-full bg-yellow-400 shadow-md shadow-yellow-400/50"></div>
+            </div>
+          </div>
+
+          <div class="text-center mb-6 overflow-x-auto p-2">
+            <div class="c4-board inline-block">
+              <div class="c4-grid" id="c4-board-grid"></div>
+            </div>
+          </div>
+
+          <div class="text-center">
+            <button id="c4-rematch-btn" onclick="requestC4Rematch()" class="hidden px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition">
+              🔄 Rematch
+            </button>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- GAME 4: ROCK PAPER SCISSORS (NEW MULTIPLAYER!) -->
+        <!-- ============================================== -->
+        <div id="game-container-rps" class="hidden glass-panel rounded-2xl p-6 sm:p-8 border border-slate-800/90 shadow-xl max-w-2xl mx-auto">
+          <div class="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-800/80 mb-6">
+            <div class="flex items-center gap-3">
+              <span class="text-3xl">✊</span>
+              <div>
+                <h3 class="text-lg font-bold text-white">Rock-Paper-Scissors Face-Off</h3>
+                <p class="text-xs text-slate-400">Lock in your move secretly, then reveal simultaneously!</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="text" id="rps-room-input" value="RPS-ARENA" placeholder="Room code" 
+                class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono uppercase text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 w-32">
+              <button onclick="joinRPSRoom()" class="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition">
+                Join Duel
+              </button>
+            </div>
+          </div>
+
+          <!-- Players & Scores -->
+          <div class="flex items-center justify-between bg-slate-900/60 p-4 rounded-xl border border-slate-800 mb-6">
+            <div class="text-left" id="rps-player-1-box">
+              <div class="text-xs text-indigo-400 font-bold">Player 1</div>
+              <div class="text-sm font-extrabold text-white" id="rps-name-1">Waiting...</div>
+              <div class="text-xs font-mono text-amber-400 font-bold" id="rps-score-1">0 Wins</div>
+            </div>
+            <div class="text-center px-4">
+              <div class="text-xs text-slate-400 uppercase font-mono mb-1">Round <span id="rps-round-num">1</span></div>
+              <span id="rps-status-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                Waiting for opponent...
+              </span>
+            </div>
+            <div class="text-right" id="rps-player-2-box">
+              <div class="text-xs text-pink-400 font-bold">Player 2</div>
+              <div class="text-sm font-extrabold text-white" id="rps-name-2">Waiting...</div>
+              <div class="text-xs font-mono text-amber-400 font-bold" id="rps-score-2">0 Wins</div>
+            </div>
+          </div>
+
+          <!-- Reveal Stage / Duel Arena -->
+          <div id="rps-reveal-stage" class="text-center py-6">
+            <div class="flex justify-center items-center gap-12 text-6xl mb-4" id="rps-hands-display">
+              <span id="rps-hand-p1" class="transform transition duration-300">❓</span>
+              <span class="text-2xl font-black text-slate-600">VS</span>
+              <span id="rps-hand-p2" class="transform transition duration-300">❓</span>
+            </div>
+            <div id="rps-round-announcement" class="text-sm font-bold text-slate-300">
+              Pick your hand below!
+            </div>
+          </div>
+
+          <!-- Choice Selection Buttons -->
+          <div class="grid grid-cols-3 gap-4 max-w-md mx-auto pt-4 border-t border-slate-800/80" id="rps-buttons-grid">
+            <button onclick="submitRPSChoice('rock')" id="rps-btn-rock" class="rps-choice-btn p-4 rounded-2xl bg-slate-900 border border-slate-700 hover:border-indigo-500 text-center flex flex-col items-center gap-2 group">
+              <span class="text-4xl group-hover:scale-125 transition">✊</span>
+              <span class="text-xs font-bold text-slate-300">Rock</span>
+            </button>
+            <button onclick="submitRPSChoice('paper')" id="rps-btn-paper" class="rps-choice-btn p-4 rounded-2xl bg-slate-900 border border-slate-700 hover:border-indigo-500 text-center flex flex-col items-center gap-2 group">
+              <span class="text-4xl group-hover:scale-125 transition">✋</span>
+              <span class="text-xs font-bold text-slate-300">Paper</span>
+            </button>
+            <button onclick="submitRPSChoice('scissors')" id="rps-btn-scissors" class="rps-choice-btn p-4 rounded-2xl bg-slate-900 border border-slate-700 hover:border-indigo-500 text-center flex flex-col items-center gap-2 group">
+              <span class="text-4xl group-hover:scale-125 transition">✌️</span>
+              <span class="text-xs font-bold text-slate-300">Scissors</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 3: CLASS NOTICE BOARD & LIVE POLLS (NEW!) -->
+      <!-- ========================================== -->
+      <div id="tab-content-board" class="hidden h-full overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
+        <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-black text-white flex items-center gap-2">
+              📢 Notice Board & Live Polls
+            </h2>
+            <p class="text-slate-400 text-sm mt-0.5">Stay updated with homework, events, and vote in class decisions.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="openNewNoticeModal()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition">
+              <i class="fa-solid fa-plus text-xs"></i>
+              <span>Post Notice</span>
+            </button>
+            <button onclick="openNewPollModal()" class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-purple-600/30 transition">
+              <i class="fa-solid fa-square-poll-vertical text-xs"></i>
+              <span>Create Poll</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Left: Announcements Stream (2 cols) -->
+          <div class="lg:col-span-2 space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-base font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-thumbtack text-indigo-400"></i>
+                Class Announcements
+              </h3>
+              <span id="announcements-count" class="text-xs font-mono text-slate-400">0 Notices</span>
+            </div>
+
+            <div id="announcements-list" class="space-y-3">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Right: Live Polls (1 col) -->
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-base font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-chart-simple text-purple-400"></i>
+                Live Class Polls
+              </h3>
+              <span id="polls-count" class="text-xs font-mono text-slate-400">0 Active</span>
+            </div>
+
+            <div id="polls-list" class="space-y-4">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 4: LEADERBOARD & CLASS ROSTER -->
+      <!-- ========================================== -->
+      <div id="tab-content-leaderboard" class="hidden h-full overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
+        <div class="mb-6">
+          <h2 class="text-2xl font-black text-white flex items-center gap-2">
+            🏆 Classmates & XP Leaderboard
+          </h2>
+          <p class="text-slate-400 text-sm mt-0.5">Earn XP by participating in class discussions and winning multiplayer battles!</p>
+        </div>
+
+        <div class="glass-panel rounded-2xl border border-slate-800/90 overflow-hidden shadow-xl">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-slate-900/80 text-xs uppercase font-semibold text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="px-6 py-4">Rank</th>
+                  <th class="px-6 py-4">Classmate</th>
+                  <th class="px-6 py-4">Student ID</th>
+                  <th class="px-6 py-4">Level</th>
+                  <th class="px-6 py-4 text-right">Total XP</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-table-body" class="divide-y divide-slate-800/60">
+                <!-- Dynamic rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 5: ADMIN PORTAL -->
+      <!-- ========================================== -->
+      <div id="tab-content-admin" class="hidden h-full overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
+        <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-black text-white flex items-center gap-2">
+              🛠️ Class Admin Console
+            </h2>
+            <p class="text-slate-400 text-sm mt-0.5">Generate student login credentials and manage your class roster.</p>
+          </div>
+          <button onclick="printClassCredentials()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-2 border border-slate-700 transition">
+            <i class="fa-solid fa-print"></i>
+            <span>Export / Print Student Logins</span>
+          </button>
+        </div>
+
+        <!-- Add Student Form Card -->
+        <div class="glass-panel rounded-2xl p-6 border border-slate-800/90 mb-8 shadow-xl">
+          <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-user-plus text-indigo-400"></i>
+            Create New Classmate Login
+          </h3>
+
+          <form id="add-student-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">Full Name</label>
+              <input type="text" id="new-student-name" required placeholder="e.g. Maya Patel" 
+                class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">Student Login ID</label>
+              <input type="text" id="new-student-id" required placeholder="e.g. STD-06" 
+                class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">Password</label>
+              <input type="text" id="new-student-password" required placeholder="e.g. pass123" 
+                class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div class="flex items-end">
+              <button type="submit" class="w-full py-2 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-md shadow-indigo-600/30 transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-plus text-xs"></i>
+                <span>Add Classmate</span>
+              </button>
+            </div>
+          </form>
+          <div id="add-student-feedback" class="mt-3 text-xs hidden"></div>
+        </div>
+
+        <!-- Registered Students Table -->
+        <div class="glass-panel rounded-2xl border border-slate-800/90 overflow-hidden shadow-xl">
+          <div class="p-4 bg-slate-900/60 border-b border-slate-800 flex items-center justify-between">
+            <span class="text-sm font-bold text-white">Registered Class Roster</span>
+            <span id="admin-roster-count" class="text-xs font-mono text-indigo-400">Total: 0</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-slate-900/80 text-xs uppercase font-semibold text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="px-6 py-3">Student</th>
+                  <th class="px-6 py-3">Login ID</th>
+                  <th class="px-6 py-3">Role</th>
+                  <th class="px-6 py-3">XP</th>
+                  <th class="px-6 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-users-table-body" class="divide-y divide-slate-800/60">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- 3. DEDICATED "WHO IS ONLINE" CLASSMATES LOUNGE MODAL -->
+  <!-- ======================================================= -->
+  <div id="online-lounge-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-panel rounded-2xl max-w-2xl w-full p-6 border border-slate-800 shadow-2xl flex flex-col max-h-[85vh]">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl border border-emerald-500/30">
+            🟢
+          </div>
+          <div>
+            <h3 class="text-lg font-black text-white">Active Classmates Lounge</h3>
+            <p class="text-xs text-slate-400">See who is active right now and challenge them directly to a match!</p>
+          </div>
+        </div>
+        <button onclick="closeOnlineLoungeModal()" class="text-slate-400 hover:text-white text-xl">✕</button>
+      </div>
+
+      <!-- Quick status message updater -->
+      <div class="py-3 px-4 bg-slate-900/90 rounded-xl border border-slate-800 my-4 flex items-center gap-3">
+        <span class="text-xs text-slate-400 font-bold uppercase shrink-0">Your Status:</span>
+        <input type="text" id="my-status-input" placeholder="e.g. Studying for Chem 🧪 or Ready to duel ⚔️" maxlength="60"
+          class="flex-1 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+        <button onclick="saveMyStatus()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shrink-0">
+          Save Status
+        </button>
+      </div>
+
+      <!-- Online Classmates Cards Grid -->
+      <div id="lounge-cards-grid" class="flex-1 overflow-y-auto space-y-3 pr-1">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 4. INCOMING GAME CHALLENGE POPUP ALERT -->
+  <!-- ========================================== -->
+  <div id="challenge-popup" class="hidden fixed top-6 right-6 z-50 max-w-sm w-full bg-slate-900 border-2 border-indigo-500 rounded-2xl shadow-2xl p-5 transform transition duration-300">
+    <div class="flex items-start gap-3">
+      <div class="text-3xl" id="challenge-popup-avatar">⚔️</div>
+      <div class="flex-1">
+        <div class="text-xs uppercase font-bold text-indigo-400 tracking-wider">Incoming Game Challenge!</div>
+        <div class="text-sm font-black text-white mt-0.5" id="challenge-popup-text">
+          Alex has challenged you to a game!
+        </div>
+        <div class="text-xs text-slate-400 mt-1" id="challenge-popup-game">Tic-Tac-Toe Duel</div>
+
+        <div class="flex items-center gap-2 mt-4">
+          <button onclick="acceptIncomingChallenge()" class="flex-1 py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition">
+            Accept Challenge
+          </button>
+          <button onclick="declineIncomingChallenge()" class="py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition">
+            Decline
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 5. AVATAR SELECTOR MODAL -->
+  <!-- ========================================== -->
+  <div id="avatar-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-panel rounded-2xl max-w-sm w-full p-6 border border-slate-800 shadow-2xl">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-base font-bold text-white">Choose Your Avatar</h3>
+        <button onclick="closeAvatarModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+      <div class="grid grid-cols-4 gap-3 py-2 text-3xl text-center" id="avatar-grid">
+        <!-- Avatars inserted via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 6. NEW NOTICE MODAL -->
+  <!-- ========================================== -->
+  <div id="new-notice-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-panel rounded-2xl max-w-md w-full p-6 border border-slate-800 shadow-2xl">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-bullhorn text-indigo-400"></i>
+          Post Class Announcement
+        </h3>
+        <button onclick="closeNewNoticeModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+      <form id="new-notice-form" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Title</label>
+          <input type="text" id="notice-title-input" required placeholder="e.g. Physics Lab Assignment Deadline"
+            class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Category Tag</label>
+          <select id="notice-tag-input" class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="Notice">📌 General Notice</option>
+            <option value="Homework">📚 Homework / Assignment</option>
+            <option value="Study">🧪 Study Session</option>
+            <option value="Event">🎉 Class Event</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Details</label>
+          <textarea id="notice-content-input" rows="4" required placeholder="Write details for your classmates..."
+            class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+        </div>
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition">
+          Post Notice (+15 XP)
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 7. NEW POLL MODAL -->
+  <!-- ========================================== -->
+  <div id="new-poll-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-panel rounded-2xl max-w-md w-full p-6 border border-slate-800 shadow-2xl">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-square-poll-vertical text-purple-400"></i>
+          Create New Class Poll
+        </h3>
+        <button onclick="closeNewPollModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+      <form id="new-poll-form" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Poll Question</label>
+          <input type="text" id="poll-question-input" required placeholder="e.g. When should we hold group study?"
+            class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Option 1</label>
+          <input type="text" id="poll-opt-1" required placeholder="e.g. Saturday 5 PM"
+            class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Option 2</label>
+          <input type="text" id="poll-opt-2" required placeholder="e.g. Sunday 11 AM"
+            class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Option 3 (Optional)</label>
+          <input type="text" id="poll-opt-3" placeholder="e.g. Sunday Evening"
+            class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+        </div>
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm transition">
+          Launch Poll (+20 XP)
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 8. CREDENTIALS PRINT / EXPORT MODAL -->
+  <!-- ========================================== -->
+  <div id="export-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white text-slate-900 rounded-2xl max-w-2xl w-full p-6 shadow-2xl my-8">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-200 mb-4">
+        <div>
+          <h3 class="text-lg font-black text-slate-900">🎓 ClassVerse — Class Login Cards</h3>
+          <p class="text-xs text-slate-500">Hand these login IDs and initial passwords to your classmates</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="window.print()" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700">
+            Print
+          </button>
+          <button onclick="closeExportModal()" class="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-300">
+            Close
+          </button>
+        </div>
+      </div>
+      <div id="export-cards-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Rendered cards -->
+      </div>
+    </div>
+  </div>
+
+  <!-- App JavaScript logic -->
+  <script src="/js/app.js"></script>
+</body>
+</html>

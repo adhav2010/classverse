@@ -1,0 +1,72 @@
+[
+  {
+    "id": 1,
+    "question": "Which planet in our solar system has the most moons?",
+    "options": ["Jupiter", "Saturn", "Mars", "Neptune"],
+    "answer": 1,
+    "category": "Science"
+  },
+  {
+    "id": 2,
+    "question": "What does CPU stand for in computer hardware?",
+    "options": ["Central Processing Unit", "Core Power Unit", "Computer Program Utility", "Central Performance User"],
+    "answer": 0,
+    "category": "Tech"
+  },
+  {
+    "id": 3,
+    "question": "What is the chemical symbol for Gold?",
+    "options": ["Ag", "Fe", "Au", "Pb"],
+    "answer": 2,
+    "category": "Chemistry"
+  },
+  {
+    "id": 4,
+    "question": "How many players are on the field in a standard cricket team?",
+    "options": ["9", "10", "11", "12"],
+    "answer": 2,
+    "category": "Sports"
+  },
+  {
+    "id": 5,
+    "question": "Which programming language was created by Brendan Eich in 10 days?",
+    "options": ["Python", "Java", "JavaScript", "C++"],
+    "answer": 2,
+    "category": "Tech"
+  },
+  {
+    "id": 6,
+    "question": "What is the capital of Australia?",
+    "options": ["Sydney", "Melbourne", "Canberra", "Brisbane"],
+    "answer": 2,
+    "category": "Geography"
+  },
+  {
+    "id": 7,
+    "question": "What is the powerhouse of the biological cell?",
+    "options": ["Nucleus", "Ribosome", "Mitochondria", "Endoplasmic Reticulum"],
+    "answer": 2,
+    "category": "Biology"
+  },
+  {
+    "id": 8,
+    "question": "In mathematics, what is the value of Pi rounded to two decimal places?",
+    "options": ["3.12", "3.14", "3.16", "3.18"],
+    "answer": 1,
+    "category": "Math"
+  },
+  {
+    "id": 9,
+    "question": "Which superhero is known as the 'Web-Slinger'?",
+    "options": ["Batman", "Spider-Man", "Iron Man", "Flash"],
+    "answer": 1,
+    "category": "Pop Culture"
+  },
+  {
+    "id": 10,
+    "question": "What does HTML stand for?",
+    "options": ["Hyper Text Markup Language", "High Tech Modern Language", "Hyperlink Text Mode Layout", "Home Tool Markup Link"],
+    "answer": 0,
+    "category": "Tech"
+  }
+]

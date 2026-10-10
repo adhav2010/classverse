@@ -1,0 +1,37 @@
+[
+  {
+    "id": "welcome-1",
+    "sender": {
+      "name": "Class Admin",
+      "studentId": "ADMIN-01",
+      "avatar": "👑",
+      "role": "admin"
+    },
+    "text": "Welcome to ClassVerse! 🎉 Chat with your classmates and play multiplayer games together!",
+    "timestamp": "2026-10-10T08:04:37.293Z"
+  },
+  {
+    "id": "msg_cb8d5131",
+    "sender": {
+      "id": "std05",
+      "name": "Aadhavan",
+      "studentId": "STD-05",
+      "avatar": "🚀",
+      "role": "student"
+    },
+    "text": "hi",
+    "timestamp": "2026-10-10T08:08:56.394Z"
+  },
+  {
+    "id": "msg_3a0740f5",
+    "sender": {
+      "id": "std01",
+      "name": "Alex Rivera",
+      "studentId": "STD-01",
+      "avatar": "🦊",
+      "role": "student"
+    },
+    "text": "Hi",
+    "timestamp": "2026-10-10T08:09:56.785Z"
+  }
+]

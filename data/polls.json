@@ -1,0 +1,34 @@
+[
+  {
+    "id": "poll-1",
+    "question": "What multiplayer game should we play next in class?",
+    "options": [
+      {
+        "id": 0,
+        "text": "🧠 Quiz Show Battle",
+        "votes": [
+          "std01",
+          "std05",
+          "std03"
+        ]
+      },
+      {
+        "id": 1,
+        "text": "⚔️ Tic-Tac-Toe Tournament",
+        "votes": [
+          "std02"
+        ]
+      },
+      {
+        "id": 2,
+        "text": "🔴 Connect Four Championship",
+        "votes": []
+      }
+    ],
+    "author": {
+      "name": "Class Admin",
+      "studentId": "ADMIN-01"
+    },
+    "createdAt": "2026-10-10T12:00:00.000Z"
+  }
+]

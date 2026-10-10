@@ -1,0 +1,63 @@
+[
+  {
+    "id": "admin",
+    "name": "Class Admin",
+    "studentId": "ADMIN-01",
+    "passwordHash": "$2b$10$12BBZfcK5Ciit8u6vjGx9OAcGKCCjQoKP0BdS82NAoIC1d1Y5sj3y",
+    "role": "admin",
+    "avatar": "👑",
+    "xp": 500,
+    "createdAt": "2026-10-10T12:00:00.000Z"
+  },
+  {
+    "id": "std01",
+    "name": "Alex Rivera",
+    "studentId": "STD-01",
+    "passwordHash": "$2b$10$Tj7evDMymk0ihxQjLVqeNuTloKU0Fk1jE81Zh6oMTtR/DbhXLtINW",
+    "role": "student",
+    "avatar": "🦊",
+    "xp": 222,
+    "createdAt": "2026-10-10T12:00:00.000Z"
+  },
+  {
+    "id": "std02",
+    "name": "Samira Khan",
+    "studentId": "STD-02",
+    "passwordHash": "$2b$10$Tj7evDMymk0ihxQjLVqeNuTloKU0Fk1jE81Zh6oMTtR/DbhXLtINW",
+    "role": "student",
+    "avatar": "🐼",
+    "xp": 210,
+    "createdAt": "2026-10-10T12:00:00.000Z"
+  },
+  {
+    "id": "std03",
+    "name": "Liam Chen",
+    "studentId": "STD-03",
+    "passwordHash": "$2b$10$Tj7evDMymk0ihxQjLVqeNuTloKU0Fk1jE81Zh6oMTtR/DbhXLtINW",
+    "role": "student",
+    "avatar": "🐯",
+    "xp": 95,
+    "createdAt": "2026-10-10T12:00:00.000Z"
+  },
+  {
+    "id": "std04",
+    "name": "Zoe Martinez",
+    "studentId": "STD-04",
+    "passwordHash": "$2b$10$Tj7evDMymk0ihxQjLVqeNuTloKU0Fk1jE81Zh6oMTtR/DbhXLtINW",
+    "role": "student",
+    "avatar": "🦄",
+    "xp": 175,
+    "createdAt": "2026-10-10T12:00:00.000Z"
+  },
+  {
+    "id": "std05",
+    "name": "Aadhavan",
+    "studentId": "STD-05",
+    "passwordHash": "$2b$10$Tj7evDMymk0ihxQjLVqeNuTloKU0Fk1jE81Zh6oMTtR/DbhXLtINW",
+    "role": "student",
+    "avatar": "🚀",
+    "xp": 447,
+    "createdAt": "2026-10-10T12:00:00.000Z",
+    "statusMessage": "Ready for a 1v1 duel! ⚔️"
+  }
+]
