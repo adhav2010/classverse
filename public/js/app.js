@@ -174,6 +174,82 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   }
 });
 
+// Auth Switcher between Sign In and Create Account
+window.switchAuthMode = function(mode) {
+  const loginForm = document.getElementById('login-form');
+  const regForm = document.getElementById('register-form');
+  const tabLogin = document.getElementById('auth-tab-login');
+  const tabReg = document.getElementById('auth-tab-register');
+  const quickBox = document.getElementById('quick-logins-box');
+
+  if (mode === 'register') {
+    loginForm.classList.add('hidden');
+    regForm.classList.remove('hidden');
+    if (quickBox) quickBox.classList.add('hidden');
+
+    tabReg.classList.add('bg-indigo-600', 'text-white', 'shadow-md', 'shadow-indigo-600/30');
+    tabReg.classList.remove('text-slate-400');
+    tabLogin.classList.remove('bg-indigo-600', 'text-white', 'shadow-md', 'shadow-indigo-600/30');
+    tabLogin.classList.add('text-slate-400');
+  } else {
+    loginForm.classList.remove('hidden');
+    regForm.classList.add('hidden');
+    if (quickBox) quickBox.classList.remove('hidden');
+
+    tabLogin.classList.add('bg-indigo-600', 'text-white', 'shadow-md', 'shadow-indigo-600/30');
+    tabLogin.classList.remove('text-slate-400');
+    tabReg.classList.remove('bg-indigo-600', 'text-white', 'shadow-md', 'shadow-indigo-600/30');
+    tabReg.classList.add('text-slate-400');
+  }
+};
+
+window.selectRegAvatar = function(emoji, btn) {
+  document.getElementById('reg-avatar').value = emoji;
+  const allBtns = document.querySelectorAll('.reg-avatar-btn');
+  allBtns.forEach(b => {
+    b.classList.remove('bg-indigo-600/40', 'border-indigo-400', 'scale-110');
+    b.classList.add('border-transparent');
+  });
+  btn.classList.add('bg-indigo-600/40', 'border-indigo-400', 'scale-110');
+  btn.classList.remove('border-transparent');
+};
+
+// Register Form Submit Handler
+document.getElementById('register-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('reg-name').value.trim();
+  const studentId = document.getElementById('reg-student-id').value.trim();
+  const password = document.getElementById('reg-password').value.trim();
+  const avatar = document.getElementById('reg-avatar').value;
+
+  const errorBox = document.getElementById('register-error');
+  const errorText = document.getElementById('register-error-text');
+  errorBox.classList.add('hidden');
+
+  try {
+    const res = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, studentId, password, avatar })
+    });
+    const data = await res.json();
+    if (res.ok && data.token) {
+      authToken = data.token;
+      localStorage.setItem('classverse_token', authToken);
+      currentUser = data.user;
+      playSound('win');
+      confetti({ particleCount: 80, spread: 70 });
+      launchApp();
+    } else {
+      errorText.textContent = data.error || 'Registration failed';
+      errorBox.classList.remove('hidden');
+    }
+  } catch (err) {
+    errorText.textContent = 'Unable to connect to server';
+    errorBox.classList.remove('hidden');
+  }
+});
+
 // ==========================================
 // NAVIGATION TABS
 // ==========================================

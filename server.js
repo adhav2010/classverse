@@ -127,6 +127,56 @@ app.post('/api/login', (req, res) => {
   });
 });
 
+app.post('/api/register', (req, res) => {
+  const { name, studentId, password, avatar } = req.body;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Full Name is required' });
+  }
+  if (!studentId || !studentId.trim()) {
+    return res.status(400).json({ error: 'Student ID is required' });
+  }
+  if (!password || password.length < 4) {
+    return res.status(400).json({ error: 'Password must be at least 4 characters long' });
+  }
+
+  const cleanId = studentId.trim().toUpperCase();
+  const existing = users.find(u => u.studentId.toUpperCase() === cleanId);
+  if (existing) {
+    return res.status(400).json({ error: `Student ID "${cleanId}" is already registered. Please sign in or use another ID.` });
+  }
+
+  const newUser = {
+    id: 'user_' + uuidv4().slice(0, 8),
+    name: name.trim(),
+    studentId: cleanId,
+    passwordHash: bcrypt.hashSync(password, 10),
+    role: 'student',
+    avatar: avatar || '🎓',
+    statusMessage: 'Just joined ClassVerse! 👋',
+    xp: 50,
+    createdAt: new Date().toISOString()
+  };
+
+  users.push(newUser);
+  saveUsers();
+
+  const token = jwt.sign({ id: newUser.id, studentId: newUser.studentId, role: newUser.role }, JWT_SECRET, { expiresIn: '7d' });
+
+  res.status(201).json({
+    success: true,
+    token,
+    user: {
+      id: newUser.id,
+      name: newUser.name,
+      studentId: newUser.studentId,
+      role: newUser.role,
+      avatar: newUser.avatar,
+      statusMessage: newUser.statusMessage,
+      xp: newUser.xp
+    }
+  });
+});
+
 app.get('/api/me', authMiddleware, (req, res) => {
   res.json({
     user: {
