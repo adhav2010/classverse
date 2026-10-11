@@ -1,0 +1,25 @@
+name: 24/7 Cloud Keep-Alive Monitor
+
+on:
+  schedule:
+    # Trigger every 10 minutes
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    name: Ping ClassVerse Cloud Server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping ClassVerse Render Server (Interval Loop)
+        run: |
+          echo "Starting keep-alive heartbeat sequence for https://classverse.onrender.com..."
+          for i in 1 2 3; do
+            echo "Ping #$i at $(date -u)"
+            curl -s -w "\nHTTP Status: %{http_code}\nTime: %{time_total}s\n" https://classverse.onrender.com/ping || true
+            if [ $i -lt 3 ]; then
+              echo "Waiting 240 seconds before next heartbeat..."
+              sleep 240
+            fi
+          done
+          echo "Keep-alive heartbeat sequence completed successfully."

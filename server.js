@@ -22,6 +22,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Lightweight keep-alive & health check endpoints
+app.get(['/ping', '/health', '/api/ping'], (req, res) => {
+  res.status(200).json({ status: 'ok', uptime: process.uptime(), timestamp: Date.now() });
+});
+
 // File paths
 const DATA_DIR = path.join(__dirname, 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
