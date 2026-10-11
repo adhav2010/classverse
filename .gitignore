@@ -2,3 +2,6 @@ node_modules/
 .DS_Store
 .env
 *.log
+bin/cloudflared
+TUNNEL_URL.txt
+public/tunnel_url.json

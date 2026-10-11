@@ -4,7 +4,12 @@
     "title": "Welcome to ClassVerse! 🚀",
     "content": "Hi everyone! Welcome to our private class website. You can chat here, play multiplayer games, and check announcements.",
     "tag": "Notice",
-    "author": { "name": "Class Admin", "studentId": "ADMIN-01", "avatar": "👑" },
+    "author": {
+      "id": "admin",
+      "name": "Class Admin",
+      "studentId": "ADMIN-01",
+      "avatar": "👑"
+    },
     "createdAt": "2026-10-10T12:00:00.000Z"
   },
   {
@@ -12,7 +17,12 @@
     "title": "Chemistry Chapter 14 Quiz Battle 🧪",
     "content": "We will have a fun Quiz Battle in the Game Lounge this evening! Prepare your Biomolecules notes.",
     "tag": "Study",
-    "author": { "name": "Aadhavan", "studentId": "STD-05", "avatar": "🚀" },
+    "author": {
+      "id": "std05",
+      "name": "Aadhavan",
+      "studentId": "STD-05",
+      "avatar": "🚀"
+    },
     "createdAt": "2026-10-10T12:30:00.000Z"
   }
 ]

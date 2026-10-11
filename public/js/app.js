@@ -87,6 +87,8 @@ async function init() {
       if (res.ok) {
         const data = await res.json();
         currentUser = data.user;
+        window.currentUser = currentUser;
+        window.authToken = authToken;
         launchApp();
         return;
       } else {
@@ -111,9 +113,6 @@ function launchApp() {
   updateUserUI();
   initSocket();
   loadChatHistory();
-  loadAnnouncements();
-  loadPolls();
-  loadLeaderboard();
 
   if (currentUser.role === 'admin') {
     document.getElementById('tab-btn-admin').classList.remove('hidden');
@@ -127,10 +126,6 @@ function launchApp() {
   joinC4Room();
   joinRPSRoom();
   if (typeof joinChessRoom === 'function') joinChessRoom(false);
-  if (typeof joinLudoRoom === 'function') joinLudoRoom();
-  if (typeof joinSnlRoom === 'function') joinSnlRoom();
-  if (typeof joinScribbleRoom === 'function') joinScribbleRoom();
-  if (typeof joinMafiaRoom === 'function') joinMafiaRoom();
 }
 
 function updateUserUI() {
@@ -168,6 +163,8 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
       authToken = data.token;
       localStorage.setItem('classverse_token', authToken);
       currentUser = data.user;
+      window.currentUser = currentUser;
+      window.authToken = authToken;
       launchApp();
     } else {
       errorText.textContent = data.error || 'Invalid credentials';
@@ -260,7 +257,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
 // ==========================================
 window.switchTab = function(tabName) {
   currentTab = tabName;
-  ['chat', 'games', 'board', 'leaderboard', 'admin'].forEach(tab => {
+  ['chat', 'games', 'admin'].forEach(tab => {
     const content = document.getElementById(`tab-content-${tab}`);
     const btn = document.getElementById(`tab-btn-${tab}`);
     const mobBtn = document.getElementById(`mobile-tab-btn-${tab}`);
@@ -295,16 +292,12 @@ window.switchTab = function(tabName) {
     const activityNames = {
       chat: '💬 Class Chat',
       games: '🎮 Game Arena',
-      board: '📢 Notice Board',
-      leaderboard: '🏆 Leaderboard',
       admin: '🛠️ Admin Console'
     };
     socket.emit('set_activity', activityNames[tabName] || 'Browsing');
   }
 
-  if (tabName === 'board') { loadAnnouncements(); loadPolls(); }
-  if (tabName === 'leaderboard') loadLeaderboard();
-  if (tabName === 'admin' && currentUser.role === 'admin') loadAdminRoster();
+  if (tabName === 'admin' && currentUser && currentUser.role === 'admin') loadAdminRoster();
 };
 
 window.selectGame = function(gameKey) {
@@ -352,7 +345,7 @@ window.selectGame = function(gameKey) {
       ludo: '🎲 Ludo Royale',
       snl: '🐍 Snake & Ladder',
       scribble: '🎨 Scribble Draw & Guess',
-      mafia: '🕵️ Mafia Village'
+      mafia: '🕵️ Mafia Social Deduction'
     };
     socket.emit('set_activity', gameNames[gameKey] || 'Gaming');
   }
@@ -395,6 +388,10 @@ window.saveMyStatus = function() {
 
 function renderOnlineUsers(users) {
   cachedOnlineUsers = users;
+  window.cachedOnlineUsers = users;
+  if (typeof window.onOnlineUsersUpdated === 'function') {
+    window.onOnlineUsersUpdated(users);
+  }
   const countText = `${users.length} Classmate${users.length === 1 ? '' : 's'} Online`;
   document.getElementById('header-online-count').textContent = countText;
   document.getElementById('chat-online-count').textContent = users.length;
@@ -488,8 +485,17 @@ function renderLoungeCards(users) {
           <button onclick="sendDirectChallenge('${u.studentId}', 'snl')" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 border border-slate-700 text-white text-xs font-bold transition flex items-center gap-1" title="Challenge to Snake & Ladder">
             <span>🐍 Snake</span>
           </button>
+          <button onclick="sendDirectChallenge('${u.studentId}', 'scribble')" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-pink-600 border border-slate-700 text-white text-xs font-bold transition flex items-center gap-1" title="Challenge to Scribble">
+            <span>🎨 Draw</span>
+          </button>
+          <button onclick="sendDirectChallenge('${u.studentId}', 'mafia')" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-purple-600 border border-slate-700 text-white text-xs font-bold transition flex items-center gap-1" title="Challenge to Mafia">
+            <span>🕵️ Mafia</span>
+          </button>
           <button onclick="sendDirectChallenge('${u.studentId}', 'ttt')" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-indigo-600 border border-slate-700 text-white text-xs font-bold transition flex items-center gap-1" title="Challenge to Tic-Tac-Toe">
             <span>⚔️ TTT</span>
+          </button>
+          <button onclick="sendDirectChallenge('${u.studentId}', 'c4')" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-indigo-600 border border-slate-700 text-white text-xs font-bold transition flex items-center gap-1" title="Challenge to Connect Four">
+            <span>🔴 C4</span>
           </button>
           <button onclick="sendDirectChallenge('${u.studentId}', 'stumble')" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 border border-slate-700 text-white text-xs font-bold transition flex items-center gap-1" title="Challenge to Stumble Dash">
             <span>🏃 Dash</span>
@@ -609,9 +615,34 @@ window.declineIncomingChallenge = function() {
 // SOCKET.IO REAL-TIME CHAT
 // ==========================================
 function initSocket() {
-  socket = io();
+  window.socket = io();
+  socket = window.socket;
+  window.currentUser = currentUser;
+
+  // Initialize game module socket listeners
+  if (typeof window.setupChessSocketListeners === 'function') window.setupChessSocketListeners();
+  if (typeof window.setupLudoSocketListeners === 'function') window.setupLudoSocketListeners();
+  if (typeof window.setupSnlSocketListeners === 'function') window.setupSnlSocketListeners();
+  if (typeof window.setupScribbleSocketListeners === 'function') window.setupScribbleSocketListeners();
+  if (typeof window.setupMafiaSocketListeners === 'function') window.setupMafiaSocketListeners();
 
   socket.emit('auth', authToken);
+
+  socket.on('auth_success', ({ user }) => {
+    currentUser = user;
+    window.currentUser = user;
+    updateUserUI();
+    // Re-sync all games
+    joinQuizRoom();
+    joinTTTRoom();
+    joinC4Room();
+    joinRPSRoom();
+    if (typeof window.joinChessRoom === 'function') window.joinChessRoom(false);
+    if (typeof window.joinLudoRoom === 'function') window.joinLudoRoom();
+    if (typeof window.joinSnlRoom === 'function') window.joinSnlRoom();
+    if (typeof window.joinScribbleRoom === 'function') window.joinScribbleRoom();
+    if (typeof window.joinMafiaRoom === 'function') window.joinMafiaRoom();
+  });
 
   socket.on('online_users', (users) => {
     renderOnlineUsers(users);
@@ -681,15 +712,6 @@ function initSocket() {
       alert(`❌ ${respondent.name} declined the challenge.`);
     }
   });
-
-  // Notice & Poll socket listeners
-  socket.on('announcement_new', (ann) => {
-    loadAnnouncements();
-    playSound('message');
-  });
-  socket.on('announcement_deleted', () => loadAnnouncements());
-  socket.on('poll_new', () => { loadPolls(); playSound('message'); });
-  socket.on('poll_updated', (updatedPoll) => updateSinglePollUI(updatedPoll));
 
   // Games Sockets
   setupGameSockets();
@@ -1174,8 +1196,11 @@ async function loadAnnouncements() {
 }
 
 function renderAnnouncements(items) {
-  document.getElementById('announcements-count').textContent = `${items.length} Notices`;
+  items = Array.isArray(items) ? items : [];
+  const countEl = document.getElementById('announcements-count');
+  if (countEl) countEl.textContent = `${items.length} Notices`;
   const container = document.getElementById('announcements-list');
+  if (!container) return;
   container.innerHTML = '';
 
   const tagColors = {
@@ -1185,9 +1210,21 @@ function renderAnnouncements(items) {
     Event: 'bg-pink-500/20 text-pink-300 border-pink-500/30'
   };
 
+  if (items.length === 0) {
+    container.innerHTML = `
+      <div class="glass-panel p-8 rounded-2xl text-center text-slate-400 text-xs">
+        <div class="text-3xl mb-2">📢</div>
+        <div class="font-bold text-white text-sm">No Notices Yet</div>
+        <p class="mt-1 text-slate-400">Be the first to post a study tip or announcement!</p>
+      </div>
+    `;
+    return;
+  }
+
   items.forEach(ann => {
-    const canDelete = currentUser && (currentUser.role === 'admin' || currentUser.id === ann.author.id);
-    const date = new Date(ann.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' });
+    const author = ann.author || {};
+    const canDelete = currentUser && (currentUser.role === 'admin' || (author.id && currentUser.id === author.id));
+    const date = ann.createdAt ? new Date(ann.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'Today';
 
     const card = document.createElement('div');
     card.className = 'glass-panel p-5 rounded-2xl border border-slate-800/90 shadow-md space-y-2';
@@ -1195,9 +1232,9 @@ function renderAnnouncements(items) {
       <div class="flex items-start justify-between gap-3">
         <div class="flex items-center gap-2">
           <span class="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border ${tagColors[ann.tag] || tagColors.Notice}">
-            ${ann.tag}
+            ${escapeHtml(ann.tag || 'Notice')}
           </span>
-          <h4 class="text-sm font-black text-white">${escapeHtml(ann.title)}</h4>
+          <h4 class="text-sm font-black text-white">${escapeHtml(ann.title || '')}</h4>
         </div>
         ${canDelete ? `
           <button onclick="deleteNotice('${ann.id}')" class="text-slate-500 hover:text-red-400 text-xs transition" title="Delete Notice">
@@ -1205,12 +1242,12 @@ function renderAnnouncements(items) {
           </button>
         ` : ''}
       </div>
-      <p class="text-xs text-slate-300 leading-relaxed">${escapeHtml(ann.content)}</p>
+      <p class="text-xs text-slate-300 leading-relaxed">${escapeHtml(ann.content || '')}</p>
       <div class="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-400">
         <div class="flex items-center gap-2">
-          <span>${ann.author.avatar || '🎓'}</span>
-          <span class="font-bold text-slate-200">${ann.author.name}</span>
-          <span class="text-[9px] font-mono text-indigo-400">(${ann.author.studentId})</span>
+          <span>${author.avatar || '🎓'}</span>
+          <span class="font-bold text-slate-200">${escapeHtml(author.name || 'Classmate')}</span>
+          ${author.studentId ? `<span class="text-[9px] font-mono text-indigo-400">(${escapeHtml(author.studentId)})</span>` : ''}
         </div>
         <span class="text-[10px] text-slate-500">${date}</span>
       </div>
@@ -1220,34 +1257,39 @@ function renderAnnouncements(items) {
 }
 
 window.openNewNoticeModal = function() {
-  document.getElementById('new-notice-modal').classList.remove('hidden');
+  const m = document.getElementById('new-notice-modal');
+  if (m) m.classList.remove('hidden');
 };
 window.closeNewNoticeModal = function() {
-  document.getElementById('new-notice-modal').classList.add('hidden');
+  const m = document.getElementById('new-notice-modal');
+  if (m) m.classList.add('hidden');
 };
 
-document.getElementById('new-notice-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const title = document.getElementById('notice-title-input').value.trim();
-  const tag = document.getElementById('notice-tag-input').value;
-  const content = document.getElementById('notice-content-input').value.trim();
+const noticeForm = document.getElementById('new-notice-form');
+if (noticeForm) {
+  noticeForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const title = (document.getElementById('notice-title-input')?.value || '').trim();
+    const tag = document.getElementById('notice-tag-input')?.value || 'Notice';
+    const content = (document.getElementById('notice-content-input')?.value || '').trim();
 
-  try {
-    const res = await fetch('/api/announcements', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
-      },
-      body: JSON.stringify({ title, tag, content })
-    });
-    if (res.ok) {
-      document.getElementById('new-notice-form').reset();
-      closeNewNoticeModal();
-      loadAnnouncements();
-    }
-  } catch (err) {}
-});
+    try {
+      const res = await fetch('/api/announcements', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ title, tag, content })
+      });
+      if (res.ok) {
+        noticeForm.reset();
+        closeNewNoticeModal();
+        loadAnnouncements();
+      }
+    } catch (err) {}
+  });
+}
 
 window.deleteNotice = async function(id) {
   if (!confirm('Delete this announcement?')) return;
@@ -1271,8 +1313,10 @@ async function loadPolls() {
 }
 
 function renderPolls(pollList) {
-  document.getElementById('polls-count').textContent = `${pollList.length} Active`;
+  const countEl = document.getElementById('polls-count');
+  if (countEl) countEl.textContent = `${pollList.length} Active`;
   const container = document.getElementById('polls-list');
+  if (!container) return;
   container.innerHTML = '';
   pollList.forEach(p => container.appendChild(createPollCard(p)));
 }
@@ -1318,7 +1362,7 @@ function createPollCard(poll) {
     </div>
     <div class="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[10px] text-slate-500">
       <span>Total: ${totalVotes} votes</span>
-      <span>By ${poll.author.name}</span>
+      <span>By ${poll.author && poll.author.name ? escapeHtml(poll.author.name) : 'Class Admin'}</span>
     </div>
   `;
   return card;
@@ -1348,58 +1392,65 @@ window.votePoll = async function(pollId, optionId) {
 };
 
 window.openNewPollModal = function() {
-  document.getElementById('new-poll-modal').classList.remove('hidden');
+  const m = document.getElementById('new-poll-modal');
+  if (m) m.classList.remove('hidden');
 };
 window.closeNewPollModal = function() {
-  document.getElementById('new-poll-modal').classList.add('hidden');
+  const m = document.getElementById('new-poll-modal');
+  if (m) m.classList.add('hidden');
 };
 
-document.getElementById('new-poll-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const question = document.getElementById('poll-question-input').value.trim();
-  const o1 = document.getElementById('poll-opt-1').value.trim();
-  const o2 = document.getElementById('poll-opt-2').value.trim();
-  const o3 = document.getElementById('poll-opt-3').value.trim();
+const pollForm = document.getElementById('new-poll-form');
+if (pollForm) {
+  pollForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const question = (document.getElementById('poll-question-input')?.value || '').trim();
+    const o1 = (document.getElementById('poll-opt-1')?.value || '').trim();
+    const o2 = (document.getElementById('poll-opt-2')?.value || '').trim();
+    const o3 = (document.getElementById('poll-opt-3')?.value || '').trim();
 
-  const options = [o1, o2];
-  if (o3) options.push(o3);
+    const options = [o1, o2];
+    if (o3) options.push(o3);
 
-  try {
-    const res = await fetch('/api/polls', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
-      },
-      body: JSON.stringify({ question, options })
-    });
-    if (res.ok) {
-      document.getElementById('new-poll-form').reset();
-      closeNewPollModal();
-      loadPolls();
-    }
-  } catch (err) {}
-});
+    try {
+      const res = await fetch('/api/polls', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ question, options })
+      });
+      if (res.ok) {
+        pollForm.reset();
+        closeNewPollModal();
+        loadPolls();
+      }
+    } catch (err) {}
+  });
+}
 
 // ==========================================
 // LEADERBOARD & CLASS ROSTER
 // ==========================================
 async function loadLeaderboard() {
   try {
-    const res = await fetch('/api/admin/users', {
+    const res = await fetch('/api/leaderboard', {
       headers: { 'Authorization': `Bearer ${authToken}` }
     });
     let list = [];
     if (res.ok) {
       const data = await res.json();
-      list = data.users;
-    } else {
+      list = data.leaderboard || [];
+    } else if (currentUser) {
       list = [currentUser];
     }
 
+    list = list.filter(Boolean);
     list.sort((a, b) => (b.xp || 0) - (a.xp || 0));
 
     const tbody = document.getElementById('leaderboard-table-body');
+    if (!tbody) return;
     tbody.innerHTML = '';
 
     list.forEach((u, idx) => {

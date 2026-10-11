@@ -14,6 +14,8 @@
   <link rel="stylesheet" href="/css/style.css">
   <!-- Canvas Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- Chess.js Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white relative">
 
@@ -228,14 +230,6 @@
             <i class="fa-solid fa-gamepad text-xs"></i>
             <span>Game Lounge</span>
           </button>
-          <button onclick="switchTab('board')" id="tab-btn-board" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all text-slate-400 hover:text-white hover:bg-slate-800/80">
-            <i class="fa-solid fa-bullhorn text-xs"></i>
-            <span>Notices & Polls</span>
-          </button>
-          <button onclick="switchTab('leaderboard')" id="tab-btn-leaderboard" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all text-slate-400 hover:text-white hover:bg-slate-800/80">
-            <i class="fa-solid fa-trophy text-xs"></i>
-            <span>Leaderboard</span>
-          </button>
           <button onclick="switchTab('admin')" id="tab-btn-admin" class="tab-btn hidden px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all text-slate-400 hover:text-white hover:bg-slate-800/80">
             <i class="fa-solid fa-user-shield text-xs"></i>
             <span>Admin Portal</span>
@@ -275,12 +269,6 @@
         </button>
         <button onclick="switchTab('games')" id="mobile-tab-btn-games" class="px-3 py-1.5 font-bold text-slate-400 whitespace-nowrap">
           <i class="fa-solid fa-gamepad mr-1"></i> Games
-        </button>
-        <button onclick="switchTab('board')" id="mobile-tab-btn-board" class="px-3 py-1.5 font-bold text-slate-400 whitespace-nowrap">
-          <i class="fa-solid fa-bullhorn mr-1"></i> Notices
-        </button>
-        <button onclick="switchTab('leaderboard')" id="mobile-tab-btn-leaderboard" class="px-3 py-1.5 font-bold text-slate-400 whitespace-nowrap">
-          <i class="fa-solid fa-trophy mr-1"></i> Ranks
         </button>
         <button onclick="switchTab('admin')" id="mobile-tab-btn-admin" class="hidden px-3 py-1.5 font-bold text-slate-400 whitespace-nowrap">
           <i class="fa-solid fa-user-shield mr-1"></i> Admin
@@ -805,18 +793,52 @@
               </div>
               <div>
                 <h3 class="text-xl font-black text-white font-heading">Grandmaster Chess</h3>
-                <p class="text-xs text-slate-400">1-on-1 strategy with Live Spectator Arena & Cheer Reactions!</p>
+                <p class="text-xs text-slate-400">Multi-Table Arena with Live Spectator Directory & Classmate Duels</p>
               </div>
             </div>
             <div class="flex flex-wrap items-center gap-2">
-              <input type="text" id="chess-room-input" value="GRANDMASTER-1" placeholder="Room code" 
-                class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono uppercase text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 w-36 shadow-inner">
-              <button onclick="joinChessRoom(false)" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-md shadow-indigo-600/30">
-                Join Match
+              <!-- Quick Table Switcher for Spectators -->
+              <div class="flex items-center gap-1.5 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-700 shadow-inner">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Table:</span>
+                <select id="chess-room-select" onchange="watchSpecificChessMatch(this.value)" class="bg-transparent text-xs font-bold text-purple-300 focus:outline-none cursor-pointer max-w-[140px] sm:max-w-[180px] truncate">
+                  <option value="GRANDMASTER-1">GRANDMASTER-1</option>
+                </select>
+              </div>
+
+              <!-- Live Matches Directory Toggle -->
+              <button onclick="toggleChessMatchesDirectory()" class="px-3 py-2 rounded-xl bg-purple-600/30 hover:bg-purple-600 border border-purple-500/40 text-purple-200 text-xs font-bold transition flex items-center gap-1.5 shadow-sm" title="Browse all active chess matches">
+                <i class="fa-solid fa-tv text-[11px]"></i>
+                <span>Live Matches</span>
+                <span id="chess-active-matches-count" class="px-1.5 py-0.2 rounded-full text-[10px] bg-purple-500 text-white font-mono ml-0.5">1</span>
               </button>
-              <button onclick="joinChessAsSpectator()" class="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition shadow-md shadow-purple-600/30 flex items-center gap-1.5">
-                <i class="fa-solid fa-eye text-[11px]"></i> Watch
+
+              <!-- New Match / Challenge Modal -->
+              <button onclick="openChessNewMatchModal()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold transition shadow-md shadow-indigo-600/30 flex items-center gap-1.5">
+                <i class="fa-solid fa-plus text-[11px]"></i>
+                <span>Start New Game</span>
               </button>
+
+              <button onclick="startChessVsBot()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-bold border border-cyan-500/30 transition shadow-sm" title="Practice solo vs bot">
+                Bot 🤖
+              </button>
+              <input type="hidden" id="chess-room-input" value="GRANDMASTER-1">
+            </div>
+          </div>
+
+          <!-- Live Matches Directory & Spectator Lounge (Collapsible) -->
+          <div id="chess-matches-directory" class="hidden mb-6 p-4 rounded-2xl bg-slate-900/95 border border-purple-500/30 shadow-2xl transition-all">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-base">📺</span>
+                <h4 class="text-xs font-black text-white uppercase tracking-wider">Active Chess Tables & Spectator Lounge</h4>
+                <span class="text-[10px] text-slate-400 hidden sm:inline">• Click Watch to switch your view instantly</span>
+              </div>
+              <button onclick="toggleChessMatchesDirectory()" class="text-slate-400 hover:text-white text-xs p-1">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <div id="chess-matches-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <!-- Dynamically populated -->
             </div>
           </div>
 
@@ -880,7 +902,6 @@
                 <div id="chess-move-history" class="space-y-1 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
                   <div class="text-xs text-slate-500 italic">No moves yet</div>
                 </div>
-              </div>
               <div class="pt-4 mt-4 border-t border-slate-800 text-center">
                 <button id="chess-rematch-btn" onclick="requestChessRematch()" class="hidden w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow-md shadow-emerald-600/30">
                   🔄 Request Rematch
@@ -890,79 +911,58 @@
           </div>
         </div>
 
-        <!-- ============================================== -->
-        <!-- GAME 7: LUDO ROYALE (2-4 PLAYERS) -->
-        <!-- ============================================== -->
-        <div id="game-container-ludo" class="hidden glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl max-w-4xl mx-auto">
-          <div class="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-800 mb-6">
-            <div class="flex items-center gap-4">
-              <div class="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-2xl border border-amber-500/30 shadow-lg shadow-amber-500/10">
-                🎲
-              </div>
-              <div>
-                <h3 class="text-xl font-black text-white font-heading">Ludo Royale</h3>
-                <p class="text-xs text-slate-400">Classic 4-Player board battle. Roll 6 to deploy and race home!</p>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <input type="text" id="ludo-room-input" value="LUDO-CLUB" placeholder="Room code" 
-                class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono uppercase text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 w-36 shadow-inner">
-              <button onclick="joinLudoRoom()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-md shadow-indigo-600/30">
-                Join Match
-              </button>
-            </div>
-          </div>
-
-          <!-- Ludo Lobby View -->
-          <div id="ludo-lobby-view" class="py-10 text-center max-w-lg mx-auto">
-            <div class="text-6xl mb-4">🎲</div>
-            <h4 class="text-2xl font-black text-white mb-2 font-heading">Ludo Waiting Room</h4>
-            <p class="text-xs text-slate-400 mb-6">Assemble 2 to 4 classmates to begin.</p>
-            <div id="ludo-lobby-players" class="grid grid-cols-2 gap-3 mb-6"></div>
-            <button id="ludo-start-btn" onclick="startLudoMatch()" class="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-emerald-500 text-white font-black text-sm shadow-xl transition transform hover:scale-105 active:scale-95">
-              🚀 Start Ludo Match!
-            </button>
-          </div>
-
-          <!-- Ludo Active Game View -->
-          <div id="ludo-game-view" class="hidden">
-            <!-- Turn & Dice Header -->
-            <div class="flex items-center justify-between bg-slate-900/80 p-4 rounded-2xl border border-slate-800 mb-6 shadow-inner">
-              <div>
-                <span id="ludo-turn-badge" class="px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-800 text-slate-200">
-                  Player Turn
-                </span>
-              </div>
-              <div class="flex items-center gap-3">
-                <div id="ludo-dice-box" onclick="rollLudoDice()" class="dice-cube" title="Click to Roll!">
-                  🎲
+        <!-- New Game / Challenge Modal -->
+          <div id="chess-new-match-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="glass-panel w-full max-w-md rounded-3xl p-6 border border-slate-700 shadow-2xl relative">
+              <div class="flex items-center justify-between pb-4 border-b border-slate-800 mb-5">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xl border border-indigo-500/30">
+                    ⚔️
+                  </div>
+                  <div>
+                    <h3 class="text-lg font-black text-white font-heading">Start New Chess Game</h3>
+                    <p class="text-xs text-slate-400">Play with a classmate or open a new table</p>
+                  </div>
                 </div>
-                <button onclick="rollLudoDice()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold text-xs shadow-md shadow-amber-500/30 transition active:scale-95">
-                  Roll Dice
+                <button onclick="closeChessNewMatchModal()" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition">
+                  <i class="fa-solid fa-xmark"></i>
                 </button>
               </div>
-            </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-              <div class="lg:col-span-3 flex justify-center">
-                <div class="ludo-board-wrapper">
-                  <div id="ludo-board-grid" class="ludo-grid"></div>
-                </div>
-              </div>
-
-              <!-- Match Log Sidebar -->
-              <div class="glass-panel p-4 rounded-2xl border border-slate-800 h-full flex flex-col justify-between">
-                <div>
-                  <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
-                    <span>Match Chronicle</span>
-                    <i class="fa-solid fa-scroll text-slate-500"></i>
-                  </h4>
-                  <div id="ludo-history-log" class="space-y-1.5 max-h-72 overflow-y-auto pr-1 scrollbar-thin"></div>
-                </div>
-                <div class="pt-4 mt-4 border-t border-slate-800 text-center">
-                  <button onclick="resetLudoMatch()" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition">
-                    🔄 Reset Table
+              <!-- Options -->
+              <div class="space-y-4">
+                <!-- Option 1: Challenge a Classmate -->
+                <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
+                  <label class="text-xs font-bold text-white mb-1.5 flex items-center gap-1.5">
+                    <i class="fa-solid fa-user-ninja text-purple-400"></i> Challenge a Specific Classmate:
+                  </label>
+                  <p class="text-[11px] text-slate-400 mb-3">Pick an online classmate. They will receive a live invitation popup to join your match!</p>
+                  <div class="mb-3">
+                    <select id="chess-modal-opponent-select" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+                      <option value="">Loading online classmates...</option>
+                    </select>
+                  </div>
+                  <button onclick="sendChessDuelInvite()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-purple-600/30 transition flex items-center justify-center gap-2 active:scale-98">
+                    <span>⚔️ Send Chess Challenge</span>
                   </button>
+                </div>
+
+                <div class="relative flex py-1 items-center">
+                  <div class="flex-grow border-t border-slate-800"></div>
+                  <span class="flex-shrink mx-3 text-[10px] uppercase font-bold text-slate-500">Or Open a Table</span>
+                  <div class="flex-grow border-t border-slate-800"></div>
+                </div>
+
+                <!-- Option 2: Create Open Table -->
+                <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
+                  <label class="text-xs font-bold text-white mb-1.5 block">Create Open Table:</label>
+                  <p class="text-[11px] text-slate-400 mb-2.5">Opens a numbered table where any classmate can join or spectate.</p>
+                  <div class="flex items-center gap-2">
+                    <input type="text" id="chess-modal-room-name" placeholder="Table Name (e.g. TABLE-2)" class="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono uppercase text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button onclick="createCustomChessTable()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-md whitespace-nowrap active:scale-98">
+                      Open Table ⚪
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -970,30 +970,118 @@
         </div>
 
         <!-- ============================================== -->
-        <!-- GAME 8: SNAKE AND LADDER -->
+        <!-- GAME 7: 4-PLAYER LUDO ROYALE -->
         <!-- ============================================== -->
-        <div id="game-container-snl" class="hidden glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl max-w-4xl mx-auto">
+        <div id="game-container-ludo" class="hidden glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl max-w-5xl mx-auto">
+          <div class="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-800 mb-6">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-2xl border border-amber-500/30 shadow-lg shadow-amber-500/10">
+                🎲
+              </div>
+              <div>
+                <h3 class="text-xl font-black text-white font-heading">Ludo Royale Face-Off</h3>
+                <p class="text-xs text-slate-400">Classic 4-Player board battle. Roll 6 to deploy and race home!</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <input type="text" id="ludo-room-input" value="LUDO-CLUB" placeholder="Room code" 
+                class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono uppercase text-white focus:outline-none focus:ring-2 focus:ring-amber-500 w-32 shadow-inner">
+              <button onclick="joinLudoRoom()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-md shadow-indigo-600/30">
+                Join Table
+              </button>
+              <button onclick="playLudoSolo()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-md shadow-emerald-600/30">
+                🤖 Play Solo (Bots)
+              </button>
+              <button id="ludo-start-btn" onclick="startLudoMatch()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-black shadow-md transition">
+                🚀 Start Match
+              </button>
+            </div>
+          </div>
+
+          <!-- Turn & Dice Header -->
+          <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900/80 p-4 rounded-2xl border border-slate-800 mb-6 shadow-inner">
+            <div class="flex items-center gap-3">
+              <span id="ludo-turn-badge" class="px-4 py-1.5 rounded-full text-xs font-black bg-slate-800 text-slate-200">
+                Roll Dice or Click "Play Solo" to Begin!
+              </span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div id="ludo-dice-box" onclick="rollLudoDice()" class="dice-cube" title="Click to Roll!">
+                🎲
+              </div>
+              <button onclick="rollLudoDice()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-black text-xs shadow-md shadow-amber-500/30 transition active:scale-95">
+                Roll Dice
+              </button>
+              <button onclick="resetLudoMatch()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition" title="Reset Board">
+                🔄 Reset
+              </button>
+            </div>
+          </div>
+
+          <!-- Main Board + Roster Grid -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            <!-- 15x15 Interactive Ludo Board Stage -->
+            <div class="lg:col-span-2 flex justify-center">
+              <div class="ludo-board-wrapper w-full max-w-[480px]">
+                <div id="ludo-board-grid" class="ludo-grid"></div>
+              </div>
+            </div>
+
+            <!-- Players Roster & Log Sidebar -->
+            <div class="glass-panel p-4 rounded-2xl border border-slate-800 h-full flex flex-col justify-between space-y-4">
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Classmate Roster (4 Teams)</h4>
+                  <button onclick="addLudoBot()" class="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold hover:underline">
+                    + Add Bot
+                  </button>
+                </div>
+                <div id="ludo-lobby-players" class="space-y-2 mb-4"></div>
+
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Live Board History</h4>
+                <div id="ludo-history-log" class="space-y-1 max-h-48 overflow-y-auto pr-1 scrollbar-thin bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/80"></div>
+              </div>
+
+              <div class="pt-3 border-t border-slate-800 text-center">
+                <button onclick="playLudoSolo()" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition">
+                  🤖 Quick Battle vs 3 Bots
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- GAME 8: SNAKE & LADDER MANIA -->
+        <!-- ============================================== -->
+        <div id="game-container-snl" class="hidden glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl max-w-5xl mx-auto">
           <div class="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-800 mb-6">
             <div class="flex items-center gap-4">
               <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-2xl border border-emerald-500/30 shadow-lg shadow-emerald-500/10">
                 🐍
               </div>
               <div>
-                <h3 class="text-xl font-black text-white font-heading">Snake & Ladder Mania</h3>
+                <h3 class="text-xl font-black text-white font-heading">Snake & Ladder Race</h3>
                 <p class="text-xs text-slate-400">Climb 🪜 ladders to leap ahead, avoid biting 🐍 snakes! First to 100 wins.</p>
               </div>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
               <input type="text" id="snl-room-input" value="SNAKE-ARENA" placeholder="Room code" 
-                class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono uppercase text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-36 shadow-inner">
-              <button onclick="joinSnlRoom()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-md shadow-emerald-600/30">
-                Join Game
+                class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono uppercase text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 w-32 shadow-inner">
+              <button onclick="joinSnlRoom()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-md shadow-emerald-600/30">
+                Join Board
+              </button>
+              <button onclick="playSnlSolo()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-md shadow-indigo-600/30">
+                🤖 Play Solo (Bots)
+              </button>
+              <button onclick="addSnlBot()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition">
+                + Bot
               </button>
             </div>
           </div>
 
           <!-- Controls Header -->
-          <div class="flex items-center justify-between bg-slate-900/80 p-4 rounded-2xl border border-slate-800 mb-6 shadow-inner">
+          <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900/80 p-4 rounded-2xl border border-slate-800 mb-6 shadow-inner">
             <span id="snl-turn-badge" class="px-4 py-1.5 rounded-full text-xs font-bold bg-slate-800 text-slate-200">
               Roll the Die to Begin!
             </span>
@@ -1004,12 +1092,15 @@
               <button onclick="rollSnlDice()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md shadow-emerald-600/30 transition active:scale-95">
                 Roll Die
               </button>
+              <button onclick="resetSnlGame()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition">
+                🔄 Reset
+              </button>
             </div>
           </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-            <div class="lg:col-span-3 flex justify-center">
-              <div id="snl-board-grid" class="snl-board"></div>
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            <div class="lg:col-span-2 flex justify-center">
+              <div id="snl-board-grid" class="snl-board w-full max-w-[480px]"></div>
             </div>
 
             <!-- Standings & Chronicle Sidebar -->
@@ -1019,12 +1110,12 @@
                 <div id="snl-standings-list" class="space-y-1.5 mb-4"></div>
 
                 <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Live Board Feed</h4>
-                <div id="snl-event-log" class="space-y-1 max-h-48 overflow-y-auto pr-1 scrollbar-thin"></div>
+                <div id="snl-event-log" class="space-y-1 max-h-48 overflow-y-auto pr-1 scrollbar-thin bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/80"></div>
               </div>
 
               <div class="pt-3 border-t border-slate-800 text-center">
                 <button onclick="resetSnlGame()" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition">
-                  🔄 Restart Game
+                  🔄 Restart Race
                 </button>
               </div>
             </div>
@@ -1045,14 +1136,14 @@
                 <p class="text-xs text-slate-400">One draws live on canvas, everyone guesses the secret word!</p>
               </div>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
               <input type="text" id="scribble-room-input" value="SCRIBBLE-LOUNGE" placeholder="Room code" 
-                class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono uppercase text-white focus:outline-none focus:ring-2 focus:ring-pink-500 w-36 shadow-inner">
-              <button onclick="joinScribbleRoom()" class="px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold transition shadow-md shadow-pink-600/30">
+                class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono uppercase text-white focus:outline-none focus:ring-2 focus:ring-pink-500 w-32 shadow-inner">
+              <button onclick="joinScribbleRoom()" class="px-3.5 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold transition shadow-md shadow-pink-600/30">
                 Join Lounge
               </button>
-              <button id="scribble-start-btn" onclick="startScribbleGame()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-bold shadow-md transition">
-                🚀 Start
+              <button id="scribble-start-btn" onclick="startScribbleGame()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-bold shadow-md transition">
+                🚀 Start Round
               </button>
             </div>
           </div>
@@ -1063,7 +1154,7 @@
               Round 1/3
             </div>
             <div id="scribble-word-display" class="text-center font-heading">
-              Waiting for game to start...
+              Free Draw Mode — Pick a color and draw, or click Start!
             </div>
             <div class="flex items-center gap-2">
               <span class="text-xs font-bold text-slate-400">Time:</span>
@@ -1074,14 +1165,14 @@
           <!-- Canvas + Controls + Chat Grid -->
           <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
             <div class="lg:col-span-3 flex flex-col items-center">
-              <div class="scribble-canvas-box w-full overflow-hidden border border-slate-700/80 mb-3">
-                <canvas id="scribble-canvas" class="w-full block"></canvas>
+              <div class="scribble-canvas-box w-full overflow-hidden border border-slate-700/80 mb-3 bg-white rounded-2xl">
+                <canvas id="scribble-canvas" width="680" height="420" class="w-full block bg-white" style="touch-action:none; min-height:360px;"></canvas>
               </div>
 
               <!-- Drawing Tools Toolbar -->
-              <div id="scribble-toolbar" class="w-full bg-slate-900/90 p-3 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-3 opacity-30 pointer-events-none transition">
+              <div id="scribble-toolbar" class="w-full bg-slate-900/90 p-3 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-3 transition">
                 <!-- Color dots -->
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
                   <div onclick="setScribbleColor('#000000', this)" class="scribble-color-dot active" style="background:#000000" title="Black"></div>
                   <div onclick="setScribbleColor('#ef4444', this)" class="scribble-color-dot" style="background:#ef4444" title="Red"></div>
                   <div onclick="setScribbleColor('#3b82f6', this)" class="scribble-color-dot" style="background:#3b82f6" title="Blue"></div>
@@ -1089,7 +1180,7 @@
                   <div onclick="setScribbleColor('#f59e0b', this)" class="scribble-color-dot" style="background:#f59e0b" title="Yellow"></div>
                   <div onclick="setScribbleColor('#ec4899', this)" class="scribble-color-dot" style="background:#ec4899" title="Pink"></div>
                   <div onclick="setScribbleColor('#8b5cf6', this)" class="scribble-color-dot" style="background:#8b5cf6" title="Purple"></div>
-                  <div onclick="setScribbleColor('#ffffff', this)" class="scribble-color-dot" style="background:#ffffff" title="Eraser"></div>
+                  <div onclick="setScribbleColor('#ffffff', this)" class="scribble-color-dot" style="background:#ffffff; border:1px solid #94a3b8;" title="Eraser"></div>
                 </div>
 
                 <!-- Sizes & Clear -->
@@ -1127,7 +1218,7 @@
         <!-- ============================================== -->
         <!-- GAME 10: MAFIA (SOCIAL DEDUCTION) -->
         <!-- ============================================== -->
-        <div id="game-container-mafia" class="hidden glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl max-w-4xl mx-auto transition-all duration-700">
+        <div id="game-container-mafia" class="hidden glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl max-w-5xl mx-auto transition-all duration-700">
           <div class="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-800 mb-6">
             <div class="flex items-center gap-4">
               <div class="w-12 h-12 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-2xl border border-purple-500/30 shadow-lg shadow-purple-500/10">
@@ -1135,28 +1226,37 @@
               </div>
               <div>
                 <h3 class="text-xl font-black text-white font-heading">Mafia: Social Deduction</h3>
-                <p class="text-xs text-slate-400">Night strikes in silence, day erupts in accusation. Find the Impostor!</p>
+                <p class="text-xs text-slate-400">Night strikes in silence, day erupts in accusation. Find the Impostors!</p>
               </div>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
               <input type="text" id="mafia-room-input" value="MAFIA-MANOR" placeholder="Room code" 
-                class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono uppercase text-white focus:outline-none focus:ring-2 focus:ring-purple-500 w-36 shadow-inner">
-              <button onclick="joinMafiaRoom()" class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition shadow-md shadow-purple-600/30">
+                class="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono uppercase text-white focus:outline-none focus:ring-2 focus:ring-purple-500 w-32 shadow-inner">
+              <button onclick="joinMafiaRoom()" class="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition shadow-md shadow-purple-600/30">
                 Join Village
               </button>
-              <button id="mafia-start-btn" onclick="startMafiaGame()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-purple-600 text-white text-xs font-bold shadow-md transition">
-                🚀 Start Game
+              <button id="mafia-start-btn" onclick="startMafiaGame()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-purple-600 text-white text-xs font-bold shadow-md transition">
+                🚀 Start Match
               </button>
             </div>
           </div>
 
           <!-- Phase Badge Header -->
           <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900/80 p-4 rounded-2xl border border-slate-800 mb-6 shadow-inner">
-            <span id="mafia-phase-badge" class="px-4 py-1.5 rounded-full text-xs font-bold bg-slate-800 text-slate-200">
-              Gathering Villagers in Town Square
-            </span>
-            <div id="mafia-my-role-card" class="hidden p-3 bg-slate-800/80 rounded-xl border border-slate-700"></div>
+            <div class="flex items-center gap-2">
+              <span id="mafia-phase-badge" class="px-4 py-1.5 rounded-full text-xs font-bold bg-slate-800 text-slate-200">
+                Gathering Villagers in Town Square — Waiting for classmates to join (Min 3 players)
+              </span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="fastForwardMafia()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition flex items-center gap-1 border border-slate-700">
+                <span>⏩ Fast Forward Phase</span>
+              </button>
+            </div>
           </div>
+
+          <!-- Secret Identity Card -->
+          <div id="mafia-my-role-card" class="hidden mb-6 p-4 bg-slate-900/90 rounded-2xl border border-slate-700 shadow-xl"></div>
 
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             <!-- Living Villagers Grid -->
@@ -1188,85 +1288,7 @@
       </div>
 
       <!-- ========================================== -->
-      <!-- TAB 3: CLASS NOTICE BOARD & LIVE POLLS -->
-      <!-- ========================================== -->
-      <div id="tab-content-board" class="hidden h-full overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
-        <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 class="text-3xl font-black text-white flex items-center gap-2.5 font-heading">
-              📢 Notice Board & Live Polls
-            </h2>
-            <p class="text-slate-400 text-sm mt-0.5">Stay updated with homework, events, and vote in class decisions.</p>
-          </div>
-          <div class="flex items-center gap-2.5">
-            <button onclick="openNewNoticeModal()" class="px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition">
-              <i class="fa-solid fa-plus text-xs"></i>
-              <span>Post Notice</span>
-            </button>
-            <button onclick="openNewPollModal()" class="px-4 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-purple-600/30 transition">
-              <i class="fa-solid fa-square-poll-vertical text-xs"></i>
-              <span>Create Poll</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="lg:col-span-2 space-y-4">
-            <div class="flex items-center justify-between">
-              <h3 class="text-base font-bold text-white flex items-center gap-2">
-                <i class="fa-solid fa-thumbtack text-indigo-400"></i>
-                Class Announcements
-              </h3>
-              <span id="announcements-count" class="text-xs font-mono text-slate-400">0 Notices</span>
-            </div>
-            <div id="announcements-list" class="space-y-3.5"></div>
-          </div>
-
-          <div class="space-y-4">
-            <div class="flex items-center justify-between">
-              <h3 class="text-base font-bold text-white flex items-center gap-2">
-                <i class="fa-solid fa-chart-simple text-purple-400"></i>
-                Live Class Polls
-              </h3>
-              <span id="polls-count" class="text-xs font-mono text-slate-400">0 Active</span>
-            </div>
-            <div id="polls-list" class="space-y-4"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ========================================== -->
-      <!-- TAB 4: LEADERBOARD & CLASS ROSTER -->
-      <!-- ========================================== -->
-      <div id="tab-content-leaderboard" class="hidden h-full overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
-        <div class="mb-6">
-          <h2 class="text-3xl font-black text-white flex items-center gap-2.5 font-heading">
-            🏆 Classmates & XP Leaderboard
-          </h2>
-          <p class="text-slate-400 text-sm mt-0.5">Earn XP by participating in class discussions and winning multiplayer battles!</p>
-        </div>
-
-        <div class="glass-panel rounded-3xl border border-slate-800 shadow-2xl overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
-              <thead class="bg-slate-900/90 text-xs uppercase font-bold text-slate-400 border-b border-slate-800 tracking-wider">
-                <tr>
-                  <th class="px-6 py-4">Rank</th>
-                  <th class="px-6 py-4">Classmate</th>
-                  <th class="px-6 py-4">Student ID</th>
-                  <th class="px-6 py-4">Level</th>
-                  <th class="px-6 py-4 text-right">Total XP</th>
-                </tr>
-              </thead>
-              <tbody id="leaderboard-table-body" class="divide-y divide-slate-800/60">
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- ========================================== -->
-      <!-- TAB 5: ADMIN PORTAL -->
+      <!-- TAB 3: ADMIN PORTAL -->
       <!-- ========================================== -->
       <div id="tab-content-admin" class="hidden h-full overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
         <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1409,84 +1431,7 @@
     </div>
   </div>
 
-  <!-- ========================================== -->
-  <!-- 6. NEW NOTICE MODAL -->
-  <!-- ========================================== -->
-  <div id="new-notice-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="glass-panel rounded-3xl max-w-md w-full p-6 border border-slate-700 shadow-2xl">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-base font-bold text-white flex items-center gap-2">
-          <i class="fa-solid fa-bullhorn text-indigo-400"></i>
-          Post Class Announcement
-        </h3>
-        <button onclick="closeNewNoticeModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
-      </div>
-      <form id="new-notice-form" class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">Title</label>
-          <input type="text" id="notice-title-input" required placeholder="e.g. Physics Lab Assignment Deadline"
-            class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">Category Tag</label>
-          <select id="notice-tag-input" class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            <option value="Notice">📌 General Notice</option>
-            <option value="Homework">📚 Homework / Assignment</option>
-            <option value="Study">🧪 Study Session</option>
-            <option value="Event">🎉 Class Event</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">Details</label>
-          <textarea id="notice-content-input" rows="4" required placeholder="Write details for your classmates..."
-            class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-        </div>
-        <button type="submit" class="w-full py-3 rounded-xl btn-glow-primary text-white font-bold text-sm transition">
-          Post Notice (+15 XP)
-        </button>
-      </form>
-    </div>
-  </div>
 
-  <!-- ========================================== -->
-  <!-- 7. NEW POLL MODAL -->
-  <!-- ========================================== -->
-  <div id="new-poll-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="glass-panel rounded-3xl max-w-md w-full p-6 border border-slate-700 shadow-2xl">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-base font-bold text-white flex items-center gap-2">
-          <i class="fa-solid fa-square-poll-vertical text-purple-400"></i>
-          Create New Class Poll
-        </h3>
-        <button onclick="closeNewPollModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
-      </div>
-      <form id="new-poll-form" class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">Poll Question</label>
-          <input type="text" id="poll-question-input" required placeholder="e.g. When should we hold group study?"
-            class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">Option 1</label>
-          <input type="text" id="poll-opt-1" required placeholder="e.g. Saturday 5 PM"
-            class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">Option 2</label>
-          <input type="text" id="poll-opt-2" required placeholder="e.g. Sunday 11 AM"
-            class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">Option 3 (Optional)</label>
-          <input type="text" id="poll-opt-3" placeholder="e.g. Sunday Evening"
-            class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
-        </div>
-        <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-sm shadow-lg shadow-purple-600/30 transition">
-          Launch Poll (+20 XP)
-        </button>
-      </form>
-    </div>
-  </div>
 
   <!-- ========================================== -->
   <!-- 8. CREDENTIALS PRINT / EXPORT MODAL -->
@@ -1585,8 +1530,6 @@
     })();
   </script>
 
-  <!-- App JavaScript logic -->
-  <script src="/js/app.js"></script>
   <!-- Stumble Dash Game Engine -->
   <script src="/js/stumble.js"></script>
   <!-- Chess with Spectator Engine -->
@@ -1599,5 +1542,7 @@
   <script src="/js/scribble-game.js"></script>
   <!-- Mafia Engine -->
   <script src="/js/mafia-game.js"></script>
+  <!-- App JavaScript logic -->
+  <script src="/js/app.js"></script>
 </body>
 </html>

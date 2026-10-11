@@ -221,6 +221,20 @@ app.get('/api/messages', authMiddleware, (req, res) => {
 });
 
 // Announcements Endpoints
+app.get('/api/leaderboard', authMiddleware, (req, res) => {
+  const leaderboard = users.map(u => ({
+    id: u.id,
+    name: u.name,
+    studentId: u.studentId,
+    role: u.role,
+    avatar: u.avatar || '🎓',
+    statusMessage: u.statusMessage || '',
+    xp: u.xp || 0,
+    createdAt: u.createdAt
+  })).sort((a, b) => (b.xp || 0) - (a.xp || 0));
+  res.json({ leaderboard });
+});
+
 app.get('/api/announcements', authMiddleware, (req, res) => {
   res.json({ announcements });
 });
@@ -1185,9 +1199,76 @@ io.on('connection', (socket) => {
   // ==========================================
   // MULTIPLAYER GAME 6: CHESS WITH SPECTATORS
   // ==========================================
+  function getChessRoomsList() {
+    const list = [];
+    for (const [roomId, room] of activeRooms.chess.entries()) {
+      list.push({
+        id: roomId,
+        status: room.status,
+        winner: room.winner,
+        whitePlayer: room.players.white ? {
+          id: room.players.white.id,
+          name: room.players.white.name,
+          studentId: room.players.white.studentId,
+          avatar: room.players.white.avatar
+        } : null,
+        blackPlayer: room.players.black ? {
+          id: room.players.black.id,
+          name: room.players.black.name,
+          studentId: room.players.black.studentId,
+          avatar: room.players.black.avatar
+        } : null,
+        spectatorCount: room.spectators ? room.spectators.length : 0,
+        spectators: (room.spectators || []).map(s => ({
+          id: s.id,
+          name: s.name,
+          avatar: s.avatar
+        })),
+        movesCount: room.history ? room.history.length : 0,
+        turn: room.chess ? room.chess.turn() : 'w'
+      });
+    }
+    return list;
+  }
+
+  function broadcastChessRoomsList() {
+    io.emit('chess_rooms_list', getChessRoomsList());
+  }
+
+  // Ensure default table exists
+  if (!activeRooms.chess.has('GRANDMASTER-1')) {
+    activeRooms.chess.set('GRANDMASTER-1', {
+      id: 'GRANDMASTER-1',
+      chess: new Chess(),
+      players: { white: null, black: null },
+      spectators: [],
+      status: 'waiting',
+      winner: null,
+      history: [],
+      lastMove: null
+    });
+  }
+
+  socket.on('chess_get_rooms', () => {
+    socket.emit('chess_rooms_list', getChessRoomsList());
+  });
+
   socket.on('chess_join', ({ roomId, asSpectator }) => {
     if (!currentUser) return;
     const rId = (roomId || 'GRANDMASTER-1').trim().toUpperCase();
+
+    // Clean up spectator membership from any other chess rooms
+    for (const [otherId, otherRoom] of activeRooms.chess.entries()) {
+      if (otherId !== rId) {
+        const specIdx = otherRoom.spectators.findIndex(s => s.id === currentUser.id);
+        if (specIdx !== -1) {
+          otherRoom.spectators.splice(specIdx, 1);
+          socket.leave('chess_' + otherId);
+          emitChessState(otherId);
+        }
+      }
+    }
+
     socket.join('chess_' + rId);
 
     let room = activeRooms.chess.get(rId);
@@ -1245,6 +1326,87 @@ io.on('connection', (socket) => {
     }
 
     emitChessState(rId);
+    broadcastChessRoomsList();
+  });
+
+  socket.on('chess_create_match', ({ roomName, targetStudentId }) => {
+    if (!currentUser) return;
+    const rId = (roomName || `TABLE-${Math.floor(100 + Math.random() * 900)}`).trim().toUpperCase();
+
+    // Leave old rooms
+    for (const [otherId, otherRoom] of activeRooms.chess.entries()) {
+      const specIdx = otherRoom.spectators.findIndex(s => s.id === currentUser.id);
+      if (specIdx !== -1) {
+        otherRoom.spectators.splice(specIdx, 1);
+        socket.leave('chess_' + otherId);
+        emitChessState(otherId);
+      }
+    }
+
+    let room = activeRooms.chess.get(rId);
+    if (!room) {
+      room = {
+        id: rId,
+        chess: new Chess(),
+        players: {
+          white: {
+            id: currentUser.id,
+            name: currentUser.name,
+            studentId: currentUser.studentId,
+            avatar: currentUser.avatar,
+            socketId: socket.id
+          },
+          black: null
+        },
+        spectators: [],
+        status: 'waiting',
+        winner: null,
+        history: [],
+        lastMove: null
+      };
+      activeRooms.chess.set(rId, room);
+    } else if (!room.players.white) {
+      room.players.white = {
+        id: currentUser.id,
+        name: currentUser.name,
+        studentId: currentUser.studentId,
+        avatar: currentUser.avatar,
+        socketId: socket.id
+      };
+    }
+
+    socket.join('chess_' + rId);
+    emitChessState(rId);
+    broadcastChessRoomsList();
+
+    // Send direct challenge invite if targetStudentId provided
+    if (targetStudentId) {
+      const targetSession = Array.from(onlineSockets.values()).find(s => s.user.studentId === targetStudentId);
+      if (targetSession) {
+        io.to(targetSession.socketId).emit('challenge_received', {
+          challenger: {
+            id: currentUser.id,
+            name: currentUser.name,
+            studentId: currentUser.studentId,
+            avatar: currentUser.avatar
+          },
+          gameType: 'chess',
+          roomId: rId
+        });
+      }
+    }
+  });
+
+  socket.on('chess_leave', ({ roomId }) => {
+    if (!currentUser) return;
+    const rId = (roomId || '').trim().toUpperCase();
+    const room = activeRooms.chess.get(rId);
+    if (room) {
+      room.spectators = room.spectators.filter(s => s.id !== currentUser.id);
+      socket.leave('chess_' + rId);
+      emitChessState(rId);
+      broadcastChessRoomsList();
+    }
   });
 
   function emitChessState(rId) {
@@ -1305,6 +1467,7 @@ io.on('connection', (socket) => {
       }
 
       emitChessState(rId);
+      broadcastChessRoomsList();
     } catch (err) {
       socket.emit('chess_error', err.message);
     }
@@ -1331,6 +1494,7 @@ io.on('connection', (socket) => {
     room.history = [];
     room.lastMove = null;
     emitChessState(rId);
+    broadcastChessRoomsList();
   });
 
   // ==========================================
@@ -1384,19 +1548,110 @@ io.on('connection', (socket) => {
     io.to('ludo_' + rId).emit('ludo_state', room);
   }
 
+  socket.on('ludo_play_solo', ({ roomId }) => {
+    if (!currentUser) return;
+    const rId = (roomId || 'LUDO-CLUB').trim().toUpperCase();
+    socket.join('ludo_' + rId);
+
+    const room = {
+      id: rId,
+      players: [
+        {
+          id: currentUser.id,
+          name: currentUser.name,
+          studentId: currentUser.studentId,
+          avatar: currentUser.avatar,
+          color: 'red',
+          tokens: [-1, -1, -1, -1]
+        },
+        {
+          id: 'bot_green',
+          name: 'Bot Green 🤖',
+          studentId: 'BOT-GREEN',
+          avatar: '🤖',
+          color: 'green',
+          tokens: [-1, -1, -1, -1],
+          isBot: true
+        },
+        {
+          id: 'bot_yellow',
+          name: 'Bot Yellow 🤖',
+          studentId: 'BOT-YELLOW',
+          avatar: '🤖',
+          color: 'yellow',
+          tokens: [-1, -1, -1, -1],
+          isBot: true
+        },
+        {
+          id: 'bot_blue',
+          name: 'Bot Blue 🤖',
+          studentId: 'BOT-BLUE',
+          avatar: '🤖',
+          color: 'blue',
+          tokens: [-1, -1, -1, -1],
+          isBot: true
+        }
+      ],
+      status: 'playing',
+      turnIndex: 0,
+      diceValue: null,
+      canRoll: true,
+      movableTokens: [],
+      winner: null,
+      historyLog: [`🎮 Solo 4-Player match started! It's your turn to roll (RED)!`]
+    };
+    activeRooms.ludo.set(rId, room);
+    emitLudoState(rId);
+  });
+
+  socket.on('ludo_add_bot', ({ roomId }) => {
+    const rId = (roomId || 'LUDO-CLUB').trim().toUpperCase();
+    const room = activeRooms.ludo.get(rId);
+    if (!room || room.status !== 'lobby' || room.players.length >= 4) return;
+
+    const assignedColor = LUDO_COLORS[room.players.length];
+    room.players.push({
+      id: 'bot_' + assignedColor,
+      name: `Bot ${assignedColor.toUpperCase()} 🤖`,
+      studentId: `BOT-${assignedColor.toUpperCase()}`,
+      avatar: '🤖',
+      color: assignedColor,
+      tokens: [-1, -1, -1, -1],
+      isBot: true
+    });
+    room.historyLog.push(`Added Bot ${assignedColor.toUpperCase()} to the table!`);
+    emitLudoState(rId);
+  });
+
   socket.on('ludo_start', ({ roomId }) => {
     const rId = (roomId || 'LUDO-CLUB').trim().toUpperCase();
     const room = activeRooms.ludo.get(rId);
-    if (!room || room.players.length < 2) return;
+    if (!room) return;
+
+    // Auto-fill with bots up to 4 players so the match is always full and active
+    while (room.players.length < 4) {
+      const assignedColor = LUDO_COLORS[room.players.length];
+      room.players.push({
+        id: 'bot_' + assignedColor,
+        name: `Bot ${assignedColor.toUpperCase()} 🤖`,
+        studentId: `BOT-${assignedColor.toUpperCase()}`,
+        avatar: '🤖',
+        color: assignedColor,
+        tokens: [-1, -1, -1, -1],
+        isBot: true
+      });
+    }
 
     room.status = 'playing';
-    room.turnIndex = 0;
+    const myIndex = room.players.findIndex(p => p.id === currentUser.id);
+    room.turnIndex = myIndex !== -1 ? myIndex : 0;
     room.canRoll = true;
     room.diceValue = null;
     room.movableTokens = [];
     room.winner = null;
-    room.historyLog.push(`Game started! ${room.players[0].name}'s turn.`);
+    room.historyLog.push(`Game started! ${room.players[room.turnIndex].name}'s turn.`);
     emitLudoState(rId);
+    checkAndTriggerLudoBot(rId);
   });
 
   socket.on('ludo_roll_dice', ({ roomId }) => {
@@ -1405,8 +1660,21 @@ io.on('connection', (socket) => {
     const room = activeRooms.ludo.get(rId);
     if (!room || room.status !== 'playing' || !room.canRoll) return;
 
-    const currentPlayer = room.players[room.turnIndex];
-    if (currentPlayer.id !== currentUser.id) return;
+    let currentPlayer = room.players[room.turnIndex];
+    if (!currentPlayer) return;
+
+    // If current turn player is offline and not a bot, auto-advance
+    const isOnline = Array.from(onlineSockets.values()).some(s => s.user.id === currentPlayer.id);
+    if (!isOnline && !currentPlayer.isBot) {
+      room.historyLog.push(`${currentPlayer.name} is offline. Skipping to next player...`);
+      advanceLudoTurn(rId, false);
+      return;
+    }
+
+    if (currentPlayer.id !== currentUser.id) {
+      socket.emit('ludo_error', `It is currently ${currentPlayer.name}'s turn!`);
+      return;
+    }
 
     const roll = Math.floor(Math.random() * 6) + 1;
     room.diceValue = roll;
@@ -1534,6 +1802,70 @@ io.on('connection', (socket) => {
     room.diceValue = null;
     room.movableTokens = [];
     emitLudoState(rId);
+
+    // Auto-skip offline non-bot players after a moment
+    const nextPlayer = room.players[room.turnIndex];
+    if (nextPlayer && !nextPlayer.isBot) {
+      const isOnline = Array.from(onlineSockets.values()).some(s => s.user.id === nextPlayer.id);
+      if (!isOnline) {
+        setTimeout(() => {
+          room.historyLog.push(`${nextPlayer.name} is offline. Auto-advancing turn.`);
+          advanceLudoTurn(rId, false);
+        }, 1200);
+        return;
+      }
+    }
+
+    checkAndTriggerLudoBot(rId);
+  }
+
+  function checkAndTriggerLudoBot(rId) {
+    const room = activeRooms.ludo.get(rId);
+    if (!room || room.status !== 'playing' || room.winner) return;
+    const player = room.players[room.turnIndex];
+    if (player && player.isBot && room.canRoll) {
+      setTimeout(() => {
+        executeLudoBotTurn(rId);
+      }, 750);
+    }
+  }
+
+  function executeLudoBotTurn(rId) {
+    const room = activeRooms.ludo.get(rId);
+    if (!room || room.status !== 'playing') return;
+    const player = room.players[room.turnIndex];
+    if (!player || !player.isBot) return;
+
+    const roll = Math.floor(Math.random() * 6) + 1;
+    room.diceValue = roll;
+    room.canRoll = false;
+
+    const movable = [];
+    player.tokens.forEach((pos, idx) => {
+      if (pos === -1) {
+        if (roll === 6) movable.push(idx);
+      } else if (pos < 106) {
+        if (pos >= 100) {
+          if (pos + roll <= 106) movable.push(idx);
+        } else {
+          movable.push(idx);
+        }
+      }
+    });
+
+    room.movableTokens = movable;
+    room.historyLog.push(`${player.name} rolled a ${roll}!`);
+    emitLudoState(rId);
+
+    if (movable.length === 0) {
+      setTimeout(() => advanceLudoTurn(rId, roll === 6), 900);
+    } else {
+      const tokenPick = (roll === 6 && movable.some(t => player.tokens[t] === -1))
+        ? movable.find(t => player.tokens[t] === -1)
+        : movable[0];
+
+      setTimeout(() => executeLudoMove(rId, player.id, tokenPick), 700);
+    }
   }
 
   socket.on('ludo_reset', ({ roomId }) => {
@@ -1594,6 +1926,80 @@ io.on('connection', (socket) => {
     emitSnlState(rId);
   });
 
+  socket.on('snl_play_solo', ({ roomId }) => {
+    if (!currentUser) return;
+    const rId = (roomId || 'SNAKE-ARENA').trim().toUpperCase();
+    socket.join('snl_' + rId);
+
+    const room = {
+      id: rId,
+      players: [
+        {
+          id: currentUser.id,
+          name: currentUser.name,
+          studentId: currentUser.studentId,
+          avatar: currentUser.avatar,
+          position: 1,
+          color: SNL_COLORS[0],
+          isBot: false
+        },
+        {
+          id: 'bot_snl_1',
+          name: 'Speedy Bot 🤖',
+          studentId: 'BOT-1',
+          avatar: '⚡',
+          position: 1,
+          color: SNL_COLORS[1],
+          isBot: true
+        },
+        {
+          id: 'bot_snl_2',
+          name: 'Lucky Bot 🤖',
+          studentId: 'BOT-2',
+          avatar: '🍀',
+          position: 1,
+          color: SNL_COLORS[2],
+          isBot: true
+        },
+        {
+          id: 'bot_snl_3',
+          name: 'Cosmo Bot 🤖',
+          studentId: 'BOT-3',
+          avatar: '🚀',
+          position: 1,
+          color: SNL_COLORS[3],
+          isBot: true
+        }
+      ],
+      turnIndex: 0,
+      status: 'playing',
+      lastRoll: null,
+      winner: null,
+      log: [`Solo race started! ${currentUser.name} vs 3 Bots. Your turn to roll!`]
+    };
+    activeRooms.snl.set(rId, room);
+    emitSnlState(rId);
+  });
+
+  socket.on('snl_add_bot', ({ roomId }) => {
+    const rId = (roomId || 'SNAKE-ARENA').trim().toUpperCase();
+    const room = activeRooms.snl.get(rId);
+    if (!room || room.players.length >= 6) return;
+
+    const botNum = room.players.length + 1;
+    room.players.push({
+      id: 'bot_snl_' + botNum,
+      name: `Racer Bot ${botNum} 🤖`,
+      studentId: `BOT-${botNum}`,
+      avatar: '🤖',
+      position: 1,
+      color: SNL_COLORS[room.players.length % SNL_COLORS.length],
+      isBot: true
+    });
+    room.log.push(`Racer Bot ${botNum} joined the race!`);
+    emitSnlState(rId);
+  });
+
   function emitSnlState(rId) {
     const room = activeRooms.snl.get(rId);
     if (!room) return;
@@ -1606,8 +2012,23 @@ io.on('connection', (socket) => {
     const room = activeRooms.snl.get(rId);
     if (!room || room.players.length === 0 || room.winner) return;
 
-    const currentPlayer = room.players[room.turnIndex];
-    if (currentPlayer.id !== currentUser.id) return;
+    let currentPlayer = room.players[room.turnIndex];
+    if (!currentPlayer) return;
+
+    // Check if current turn player is offline and not a bot
+    const isOnline = Array.from(onlineSockets.values()).some(s => s.user.id === currentPlayer.id);
+    if (!isOnline && !currentPlayer.isBot) {
+      room.log.push(`${currentPlayer.name} is offline. Skipping turn...`);
+      room.turnIndex = (room.turnIndex + 1) % room.players.length;
+      checkAndTriggerSnlBot(rId);
+      emitSnlState(rId);
+      return;
+    }
+
+    if (currentPlayer.id !== currentUser.id) {
+      socket.emit('snl_error', `It is currently ${currentPlayer.name}'s turn!`);
+      return;
+    }
 
     const roll = Math.floor(Math.random() * 6) + 1;
     room.lastRoll = roll;
@@ -1640,10 +2061,78 @@ io.on('connection', (socket) => {
 
     if (!room.winner) {
       room.turnIndex = (room.turnIndex + 1) % room.players.length;
+      checkAndTriggerSnlBot(rId);
     }
 
     emitSnlState(rId);
   });
+
+  function checkAndTriggerSnlBot(rId) {
+    const room = activeRooms.snl.get(rId);
+    if (!room || room.winner || room.players.length === 0) return;
+    const player = room.players[room.turnIndex];
+    if (!player) return;
+
+    if (player.isBot) {
+      setTimeout(() => {
+        executeSnlBotTurn(rId);
+      }, 750);
+    } else {
+      // If next player is offline human, skip them after a short delay
+      const isOnline = Array.from(onlineSockets.values()).some(s => s.user.id === player.id);
+      if (!isOnline) {
+        setTimeout(() => {
+          const curRoom = activeRooms.snl.get(rId);
+          if (curRoom && curRoom.turnIndex === room.turnIndex && !curRoom.winner) {
+            curRoom.log.push(`${player.name} is offline. Skipping turn...`);
+            curRoom.turnIndex = (curRoom.turnIndex + 1) % curRoom.players.length;
+            checkAndTriggerSnlBot(rId);
+            emitSnlState(rId);
+          }
+        }, 1200);
+      }
+    }
+  }
+
+  function executeSnlBotTurn(rId) {
+    const room = activeRooms.snl.get(rId);
+    if (!room || room.winner) return;
+    const player = room.players[room.turnIndex];
+    if (!player || !player.isBot) return;
+
+    const roll = Math.floor(Math.random() * 6) + 1;
+    room.lastRoll = roll;
+
+    let target = player.position + roll;
+    if (target > 100) {
+      room.log.push(`${player.name} rolled ${roll} (overshot 100)`);
+    } else {
+      let eventText = `${player.name} rolled ${roll} and moved to ${target}.`;
+      if (SNL_LADDERS[target]) {
+        target = SNL_LADDERS[target];
+        eventText = `🪜 ${player.name} climbed ladder to ${target}!`;
+      } else if (SNL_SNAKES[target]) {
+        target = SNL_SNAKES[target];
+        eventText = `🐍 ${player.name} bitten by snake to ${target}!`;
+      }
+      player.position = target;
+      room.log.push(eventText);
+
+      if (target === 100) {
+        room.winner = player;
+        room.log.push(`👑 ${player.name} WON THE RACE!`);
+      }
+    }
+
+    if (room.log.length > 25) room.log.shift();
+
+    if (!room.winner) {
+      room.turnIndex = (room.turnIndex + 1) % room.players.length;
+      checkAndTriggerSnlBot(rId);
+    }
+
+    emitSnlState(rId);
+  }
 
   socket.on('snl_reset', ({ roomId }) => {
     const rId = (roomId || 'SNAKE-ARENA').trim().toUpperCase();
@@ -1656,6 +2145,7 @@ io.on('connection', (socket) => {
     room.winner = null;
     room.log = [`Game reset! Roll to begin.`];
     emitSnlState(rId);
+    checkAndTriggerSnlBot(rId);
   });
 
   // ==========================================
@@ -1719,6 +2209,7 @@ io.on('connection', (socket) => {
       status: room.status,
       artist: currentArtist,
       maskedWord: room.maskedWord,
+      revealedWord: (room.status === 'reveal' || room.status === 'game_over') ? room.word : null,
       timeLeft: room.timeLeft,
       round: room.round,
       totalRounds: room.totalRounds,
@@ -1736,7 +2227,18 @@ io.on('connection', (socket) => {
   socket.on('scribble_start', ({ roomId }) => {
     const rId = (roomId || 'SCRIBBLE-LOUNGE').trim().toUpperCase();
     const room = activeRooms.scribble.get(rId);
-    if (!room || room.players.length < 2) return;
+    if (!room) return;
+
+    if (room.players.length < 2) {
+      io.to('scribble_' + rId).emit('scribble_chat', { system: true, text: '⚠️ Need at least 2 players in the room to start Draw & Guess! Invite a classmate.' });
+      return;
+    }
+
+    // Set artist to the user who clicked start if in room
+    if (currentUser) {
+      const myIdx = room.players.findIndex(p => p.id === currentUser.id);
+      if (myIdx !== -1) room.artistIndex = myIdx;
+    }
 
     startScribbleRound(rId);
   });
@@ -1746,6 +2248,7 @@ io.on('connection', (socket) => {
     if (!room) return;
 
     clearInterval(room.timerInterval);
+
     const randomWord = SCRIBBLE_WORDS[Math.floor(Math.random() * SCRIBBLE_WORDS.length)];
     room.word = randomWord;
     room.maskedWord = randomWord.replace(/[a-zA-Z]/g, '_ ');
@@ -1846,16 +2349,48 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('scribble_reset', ({ roomId }) => {
+    const rId = (roomId || 'SCRIBBLE-LOUNGE').trim().toUpperCase();
+    const room = activeRooms.scribble.get(rId);
+    if (!room) return;
+    clearInterval(room.timerInterval);
+    clearTimeout(room.botGuessTimeout);
+    clearTimeout(room.botGuessTimeout2);
+    room.status = 'lobby';
+    room.round = 1;
+    room.word = '';
+    room.maskedWord = '';
+    room.timeLeft = 60;
+    room.strokes = [];
+    room.guessedUsers = new Set();
+    room.players.forEach(p => p.score = 0);
+    room.chatLog.push({ system: true, text: 'Lounge reset to lobby.' });
+    io.to('scribble_' + rId).emit('scribble_clear_canvas');
+    emitScribbleState(rId);
+  });
+
   function endScribbleRound(rId, reason) {
     const room = activeRooms.scribble.get(rId);
     if (!room) return;
+
+    clearInterval(room.timerInterval);
+    clearTimeout(room.botGuessTimeout);
+    clearTimeout(room.botGuessTimeout2);
 
     room.status = 'reveal';
     room.chatLog.push({ system: true, text: `Round over! ${reason} The word was: ${room.word.toUpperCase()}` });
     emitScribbleState(rId);
 
     setTimeout(() => {
-      room.artistIndex = (room.artistIndex + 1) % room.players.length;
+      // Find next human or advance
+      let nextIdx = (room.artistIndex + 1) % room.players.length;
+      const hasHuman = room.players.some(p => !p.isBot);
+      if (hasHuman && room.players[nextIdx].isBot) {
+        const humanIdx = room.players.findIndex(p => !p.isBot);
+        if (humanIdx !== -1) nextIdx = humanIdx;
+      }
+      room.artistIndex = nextIdx;
+
       if (room.artistIndex === 0) room.round++;
 
       if (room.round > room.totalRounds) {
@@ -1919,6 +2454,7 @@ io.on('connection', (socket) => {
       name: p.name,
       avatar: p.avatar,
       isAlive: p.isAlive,
+      isBot: false,
       role: room.phase === 'ended' || !p.isAlive ? p.role : 'hidden'
     }));
 
@@ -1934,24 +2470,29 @@ io.on('connection', (socket) => {
     });
 
     room.players.forEach(p => {
-      io.to(p.socketId).emit('mafia_my_role', { role: p.role, isAlive: p.isAlive });
+      if (p.socketId) {
+        io.to(p.socketId).emit('mafia_my_role', { role: p.role, isAlive: p.isAlive });
+      }
     });
   }
 
   socket.on('mafia_start', ({ roomId }) => {
     const rId = (roomId || 'MAFIA-MANOR').trim().toUpperCase();
     const room = activeRooms.mafia.get(rId);
-    if (!room || room.players.length < 3) {
-      return socket.emit('mafia_error', "At least 3 players are required to start Mafia!");
+    if (!room) return;
+
+    if (room.players.length < 3) {
+      socket.emit('mafia_error', 'Need at least 3 players to start Mafia! Invite classmates to join.');
+      return;
     }
 
     const shuffled = [...room.players].sort(() => 0.5 - Math.random());
     shuffled.forEach(p => { p.role = 'villager'; p.isAlive = true; });
 
     shuffled[0].role = 'mafia';
-    if (shuffled.length >= 2) shuffled[1].role = 'doctor';
-    if (shuffled.length >= 3) shuffled[2].role = 'detective';
-    if (shuffled.length >= 6) shuffled[3].role = 'mafia';
+    if (shuffled.length >= 3) shuffled[1].role = 'doctor';
+    if (shuffled.length >= 4) shuffled[2].role = 'detective';
+    if (shuffled.length >= 7) shuffled[3].role = 'mafia';
 
     room.phase = 'night';
     room.round = 1;
@@ -1960,13 +2501,27 @@ io.on('connection', (socket) => {
     startMafiaNight(rId);
   });
 
+  socket.on('mafia_fast_forward', ({ roomId }) => {
+    const rId = (roomId || 'MAFIA-MANOR').trim().toUpperCase();
+    const room = activeRooms.mafia.get(rId);
+    if (!room || room.phase === 'lobby' || room.phase === 'ended') return;
+
+    if (room.phase === 'night') {
+      clearInterval(room.timerInterval);
+      resolveMafiaNight(rId);
+    } else if (room.phase === 'day') {
+      clearInterval(room.timerInterval);
+      resolveMafiaDayVotes(rId);
+    }
+  });
+
   function startMafiaNight(rId) {
     const room = activeRooms.mafia.get(rId);
     if (!room) return;
 
     clearInterval(room.timerInterval);
     room.phase = 'night';
-    room.timeLeft = 25;
+    room.timeLeft = 20;
     room.nightActions = { killTarget: null, protectTarget: null, inspectTarget: null };
 
     emitMafiaState(rId);
@@ -2030,7 +2585,7 @@ io.on('connection', (socket) => {
     if (checkMafiaWinCondition(rId)) return;
 
     room.phase = 'day';
-    room.timeLeft = 35;
+    room.timeLeft = 25;
     room.votes = {};
     emitMafiaState(rId);
 
@@ -2136,6 +2691,18 @@ io.on('connection', (socket) => {
     if (currentUser) {
       onlineSockets.delete(socket.id);
       io.emit('online_users', getOnlineUsersList());
+
+      // Remove from chess spectators
+      let chessUpdated = false;
+      for (const [rId, room] of activeRooms.chess.entries()) {
+        const specIdx = room.spectators.findIndex(s => s.id === currentUser.id);
+        if (specIdx !== -1) {
+          room.spectators.splice(specIdx, 1);
+          emitChessState(rId);
+          chessUpdated = true;
+        }
+      }
+      if (chessUpdated) broadcastChessRoomsList();
     }
   });
 });

@@ -16,7 +16,7 @@
     "passwordHash": "$2b$10$Tj7evDMymk0ihxQjLVqeNuTloKU0Fk1jE81Zh6oMTtR/DbhXLtINW",
     "role": "student",
     "avatar": "🦊",
-    "xp": 222,
+    "xp": 272,
     "createdAt": "2026-10-10T12:00:00.000Z"
   },
   {
@@ -26,7 +26,7 @@
     "passwordHash": "$2b$10$Tj7evDMymk0ihxQjLVqeNuTloKU0Fk1jE81Zh6oMTtR/DbhXLtINW",
     "role": "student",
     "avatar": "🐼",
-    "xp": 210,
+    "xp": 385,
     "createdAt": "2026-10-10T12:00:00.000Z"
   },
   {
@@ -70,5 +70,16 @@
     "statusMessage": "Just joined ClassVerse! 👋",
     "xp": 50,
     "createdAt": "2026-10-10T10:08:45.225Z"
+  },
+  {
+    "id": "user_f8966c7f",
+    "name": "aadhav",
+    "studentId": "AADHAV",
+    "passwordHash": "$2b$10$vntNLYLd1SI./1B9w9aoounSBGcRTQMAIJP51zaSHwXTYfUGwW0ta",
+    "role": "student",
+    "avatar": "🦊",
+    "statusMessage": "Just joined ClassVerse! 👋",
+    "xp": 125,
+    "createdAt": "2026-10-10T16:40:05.386Z"
   }
 ]
